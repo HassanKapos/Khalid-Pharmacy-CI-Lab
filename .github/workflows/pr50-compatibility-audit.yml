@@ -1,0 +1,59 @@
+name: PR50 Workflow Compatibility Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - pr50-pharmacy-workflow-copy
+    paths:
+      - .github/workflows/android-build.yml
+      - .github/workflows/pr50-compatibility-audit.yml
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout CI Lab
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Verify runner and Node.js 24
+        run: |
+          set -euo pipefail
+          node --version
+          npm --version
+          node -e "if (Number(process.versions.node.split('.')[0]) < 24) process.exit(1)"
+          echo "RUNNER_NODE24=PASS"
+
+      - name: Validate copied workflow syntax
+        run: |
+          set -euo pipefail
+          test -s .github/workflows/android-build.yml
+          ruby -e 'require "yaml"; YAML.load_file(".github/workflows/android-build.yml"); puts "WORKFLOW_YAML_PARSE=PASS"'
+
+      - name: Audit required pharmacy build inputs
+        run: |
+          set -euo pipefail
+          missing=0
+          for path in package.json package-lock.json android/ scripts/; do
+            if [ -e "$path" ]; then
+              echo "PRESENT: $path"
+            else
+              echo "MISSING: $path"
+              missing=$((missing + 1))
+            fi
+          done
+          if [ "$missing" -gt 0 ]; then
+            echo "::notice::The public CI Lab contains only the copied workflow, not the pharmacy application source/build inputs. A full APK build is intentionally not attempted."
+            echo "FULL_PHARMACY_BUILD=BLOCKED_MISSING_PROJECT_FILES"
+          else
+            echo "FULL_PHARMACY_BUILD_INPUTS=AVAILABLE"
+          fi
