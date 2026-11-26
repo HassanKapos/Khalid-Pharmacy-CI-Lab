@@ -1,0 +1,19 @@
+{
+  "name": "khalid-phase2f-isolated-verification",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test:pr-f1": "tsx scripts/test-phase2f-stocktake-foundation.ts"
+  },
+  "dependencies": {
+    "@firebase/rules-unit-testing": "6.0.0",
+    "firebase": "13.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.14.0",
+    "tsx": "4.21.0",
+    "typescript": "7.0.2"
+  }
+}
