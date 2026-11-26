@@ -1,0 +1,645 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Verified pharmacy staff profile storing role and assigned branch IDs.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 254
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "role": {
+          "type": "string",
+          "enum": ["super_admin", "admin", "cashier"]
+        },
+        "branchIds": {
+          "type": "array",
+          "description": "Assigned branch identifiers (bounded to 50 max)."
+        },
+        "activeBranchId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "displayName", "role", "branchIds", "active", "createdAt", "updatedAt"]
+    },
+    "StaffInvite": {
+      "title": "StaffInvite",
+      "description": "Pre-authorized staff invitation created by Super Admin or Branch Admin.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 254
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "role": {
+          "type": "string",
+          "enum": ["super_admin", "admin", "cashier"]
+        },
+        "branchIds": {
+          "type": "array",
+          "description": "Assigned branch identifiers for this invitation."
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "invitedByUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "claimedUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "email", "displayName", "role", "branchIds", "active", "invitedByUid", "createdAt", "updatedAt"]
+    },
+    "PharmacyBranch": {
+      "title": "PharmacyBranch",
+      "description": "Pharmacy branch metadata and membership index.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "nameAr": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "nameEn": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "city": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "adminUids": {
+          "type": "array",
+          "description": "Assigned branch admin UIDs (max 25)."
+        },
+        "memberUids": {
+          "type": "array",
+          "description": "Assigned branch staff UIDs (max 50)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "code", "nameAr", "nameEn", "active", "adminUids", "memberUids", "createdAt", "updatedAt"]
+    },
+    "BranchMedicine": {
+      "title": "BranchMedicine",
+      "description": "Branch-scoped medicine catalog and protected pricing record.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "branchId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "barcode": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "minStock": {
+          "type": "number"
+        },
+        "buyPrice": {
+          "type": "number"
+        },
+        "sellPrice": {
+          "type": "number"
+        },
+        "expiry": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "stripsPerPack": {
+          "type": "number"
+        },
+        "pillsPerStrip": {
+          "type": "number"
+        },
+        "batchNumber": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "branchId", "name", "buyPrice", "sellPrice", "createdAt", "updatedAt"]
+    },
+    "BranchInventoryLedger": {
+      "title": "BranchInventoryLedger",
+      "description": "Append-only branch inventory movement ledger entry.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "branchId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "medicineId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "type": {
+          "type": "string",
+          "enum": ["INITIAL", "SALE", "PURCHASE", "RETURN", "DAMAGE", "ADJUSTMENT"]
+        },
+        "unit": {
+          "type": "string",
+          "enum": ["pack", "strip", "pill"]
+        },
+        "quantityDelta": {
+          "type": "number"
+        },
+        "baseUnitsDelta": {
+          "type": "number"
+        },
+        "referenceId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "employeeName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "branchId", "medicineId", "type", "unit", "quantityDelta", "baseUnitsDelta", "userId", "createdAt"]
+    },
+    "BranchSale": {
+      "title": "BranchSale",
+      "description": "Branch-scoped POS sale record.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "branchId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "invoiceNumber": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "customer": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "itemsCount": {
+          "type": "number"
+        },
+        "subtotal": {
+          "type": "number"
+        },
+        "discount": {
+          "type": "number"
+        },
+        "total": {
+          "type": "number"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["Cash", "Card", "Bankak"]
+        },
+        "cashierUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "cashierName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "branchId", "invoiceNumber", "itemsCount", "subtotal", "discount", "total", "paymentMethod", "cashierUid", "createdAt"]
+    },
+    "BranchSupplier": {
+      "title": "BranchSupplier",
+      "description": "Branch-scoped supplier account record.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "branchId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "balance": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "branchId", "balance", "createdAt", "updatedAt"]
+    },
+    "BranchPurchaseInvoice": {
+      "title": "BranchPurchaseInvoice",
+      "description": "Branch-scoped supplier purchase invoice.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "branchId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "supplierId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "invoiceNumber": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "netAmount": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "branchId", "supplierId", "invoiceNumber", "netAmount", "createdAt"]
+    },
+    "BranchSupplierTransaction": {
+      "title": "BranchSupplierTransaction",
+      "description": "Branch-scoped supplier financial ledger entry.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "branchId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "supplierId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "type": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "branchId", "supplierId", "type", "amount", "createdAt"]
+    },
+    "BranchReceipt": {
+      "title": "BranchReceipt",
+      "description": "Branch-scoped Bankak payment receipt metadata.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "branchId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "transactionId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "status": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "createdByUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "branchId", "status", "createdByUid", "createdAt", "updatedAt"]
+    },
+    "BranchOcrDraft": {
+      "title": "BranchOcrDraft",
+      "description": "Branch-scoped supplier invoice OCR draft.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "branchId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "status": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "branchId", "status", "createdAt", "updatedAt"]
+    },
+    "BranchStocktakingSession": {
+      "title": "BranchStocktakingSession",
+      "description": "Branch-scoped inventory stocktaking session.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "branchId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "status": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "branchId", "status", "createdAt", "updatedAt"]
+    },
+    "BranchAuditLog": {
+      "title": "BranchAuditLog",
+      "description": "Append-only security and operational audit event for a branch.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "branchId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "actorUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "actorRole": {
+          "type": "string",
+          "enum": ["super_admin", "admin", "cashier"]
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "branchId", "actorUid", "actorRole", "action", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Protected staff profiles mapping Firebase Auth UIDs to verified roles and assigned branch IDs."
+    },
+    "/staff_invites/{inviteId}": {
+      "schema": { "$ref": "#/entities/StaffInvite" },
+      "description": "Pre-authorized email invitations for staff onboarding without client-side privilege escalation."
+    },
+    "/branches/{branchId}": {
+      "schema": { "$ref": "#/entities/PharmacyBranch" },
+      "description": "Pharmacy branch metadata and bounded member/admin UID lists."
+    },
+    "/branches/{branchId}/medicines/{medicineId}": {
+      "schema": { "$ref": "#/entities/BranchMedicine" },
+      "description": "Branch-isolated medicine catalog and prices."
+    },
+    "/branches/{branchId}/inventory_ledger/{movementId}": {
+      "schema": { "$ref": "#/entities/BranchInventoryLedger" },
+      "description": "Append-only branch inventory movements."
+    },
+    "/branches/{branchId}/sales/{saleId}": {
+      "schema": { "$ref": "#/entities/BranchSale" },
+      "description": "Branch-isolated POS sales."
+    },
+    "/branches/{branchId}/suppliers/{supplierId}": {
+      "schema": { "$ref": "#/entities/BranchSupplier" },
+      "description": "Branch-isolated suppliers."
+    },
+    "/branches/{branchId}/purchase_invoices/{invoiceId}": {
+      "schema": { "$ref": "#/entities/BranchPurchaseInvoice" },
+      "description": "Branch-isolated supplier purchase invoices."
+    },
+    "/branches/{branchId}/supplier_transactions/{txId}": {
+      "schema": { "$ref": "#/entities/BranchSupplierTransaction" },
+      "description": "Branch-isolated supplier payment and balance transactions."
+    },
+    "/branches/{branchId}/receipts/{receiptId}": {
+      "schema": { "$ref": "#/entities/BranchReceipt" },
+      "description": "Branch-isolated Bankak archive receipts."
+    },
+    "/branches/{branchId}/supplier_invoice_drafts/{draftId}": {
+      "schema": { "$ref": "#/entities/BranchOcrDraft" },
+      "description": "Branch-isolated supplier invoice OCR drafts."
+    },
+    "/branches/{branchId}/stocktaking_sessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/BranchStocktakingSession" },
+      "description": "Branch-isolated stocktaking sessions."
+    },
+    "/branches/{branchId}/audit_logs/{eventId}": {
+      "schema": { "$ref": "#/entities/BranchAuditLog" },
+      "description": "Append-only branch audit events."
+    }
+  }
+}

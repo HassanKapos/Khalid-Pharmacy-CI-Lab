@@ -67,20 +67,28 @@ jobs:
         run: |
           npm run test:bankak-retention
           npm run test:error-logs
-      - name: Multi-branch and Phase 2D offline policy tests
-        run: |
-          npm run test:multi-branch
-          npm run test:pr2d-packing-lock
-          npm run test:phase2d-pr2c
-      - name: Preserve Bankak Phase A failure status
+      - name: Multi-branch security tests
+        id: multi_branch
+        continue-on-error: true
+        run: npm run test:multi-branch
+      - name: Phase 2D packing lock coordinator
+        id: packing_lock
+        continue-on-error: true
+        run: npm run test:pr2d-packing-lock
+      - name: Phase 2D PR2C exact costing and pricing
+        id: phase2d_pr2c
+        continue-on-error: true
+        run: npm run test:phase2d-pr2c
+      - name: Preserve required regression failure status
         if: always()
         run: |
-          if [ "${{ steps.bankak_phase_a.outcome }}" = "failure" ]; then
-            echo "::error::Bankak Phase A acceptance suite failed; see its logs."
+          if [ "${{ steps.bankak_phase_a.outcome }}" = "failure" ] || [ "${{ steps.multi_branch.outcome }}" = "failure" ] || [ "${{ steps.packing_lock.outcome }}" = "failure" ] || [ "${{ steps.phase2d_pr2c.outcome }}" = "failure" ]; then
+            echo "::error::One or more required regression suites failed; see their logs."
             exit 1
           fi
 
   android-debug-apk:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[android]')
     name: Android Debug APK build
     runs-on: ubuntu-latest
     timeout-minutes: 60
