@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+/* Immediate system font stack fallback with zero render-blocking webfont dependencies */
+[v-cloak] {
+  display: none !important;
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  font-family: 'Cairo', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Segoe UI Arabic", Tahoma, Arial, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+.font-ar {
+  font-family: 'Cairo', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Segoe UI Arabic", Tahoma, Arial, sans-serif;
+}
+
+.font-en {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.med-name {
+  direction: ltr !important;
+  unicode-bidi: isolate;
+  text-align: start;
+}
+
+[dir="rtl"] .med-name {
+  text-align: right;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+/* ==========================================================================
+   Google ML Kit CameraX Native Transparency & Viewfinder Rules (Phase 1B PoC)
+   Permits CameraX PreviewView beneath WebView to shine through cleanly on Android
+   ========================================================================== */
+html.barcode-scanner-active,
+body.barcode-scanner-active {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+body.barcode-scanner-active #app {
+  background: transparent !important;
+  background-color: transparent !important;
+  visibility: hidden !important;
+}
+
+/* Phase 1M.5-R2: Targeted POS Container Transparency Overrides */
+body.barcode-scanner-active #app main,
+body.barcode-scanner-active #app aside,
+body.barcode-scanner-active #app header,
+body.barcode-scanner-active #app nav,
+body.barcode-scanner-active #app section,
+body.barcode-scanner-active #app .bg-white,
+body.barcode-scanner-active #app .bg-slate-50,
+body.barcode-scanner-active #app .bg-slate-100,
+body.barcode-scanner-active #app .bg-slate-900,
+body.barcode-scanner-active #app .bg-white\/95 {
+  background-color: transparent !important;
+}
+
+body.barcode-scanner-active .scanner-modal-backdrop,
+body.barcode-scanner-active [data-scanner-backdrop="true"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+}
+
+
+/* Standalone Viewfinder Overlay Container */
+#mlkit-poc-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: auto;
+  user-select: none;
+  font-family: 'Cairo', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  direction: rtl;
+}
+
+/* Cutout effect: dark vignette surrounding the transparent camera aperture */
+.mlkit-viewfinder-cutout {
+  box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.88);
+  border-radius: 1.5rem;
+  border: 2px solid rgba(16, 185, 129, 0.7);
+  position: relative;
+  background: transparent !important;
+}
+
+/* Animated laser scanning line */
+@keyframes mlkit-laser {
+  0%, 100% {
+    top: 8%;
+    opacity: 0.6;
+  }
+  50% {
+    top: 90%;
+    opacity: 1;
+  }
+}
+
+.mlkit-laser-line {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #10b981 25%, #34d399 50%, #10b981 75%, transparent);
+  box-shadow: 0 0 10px 2px rgba(16, 185, 129, 0.85);
+  animation: mlkit-laser 2s ease-in-out infinite;
+}
+

@@ -1,0 +1,27 @@
+================================================================================
+KHALID PHARMACY — PHASE 1M.3-R1 NATIVE SERIALIZATION & CI HARDENING MANIFEST
+Generated: 2026-11-06T01:44:10Z
+Target Branch: phase-1-mlkit-poc-cloud-build
+Target Repository: HassanKapos/Khalid-Pharmacy-1
+================================================================================
+
+File: src/services/mlKitPocService.ts
+  Size (bytes): 36461
+  Line count:   963
+  SHA-256:      e9b5aa90334668669ac979663e7904ec8e188ef7de858833560e3be3707fd1e7
+--------------------------------------------------------------------------------
+File: scripts/test-mlkit-adversarial.ts
+  Size (bytes): 27259
+  Line count:   711
+  SHA-256:      4507880f5a3865edf6d3c4dd7f6f79d1993eabaa27a125d8927944b9683ebc57
+--------------------------------------------------------------------------------
+File: src/index.css
+  Size (bytes): 2619
+  Line count:   102
+  SHA-256:      ba5f0474300aa0e6291549305cea25ac25ea9a27b87c1a19137a50915020a20e
+--------------------------------------------------------------------------------
+File: .github/workflows/android-build.yml
+  Size (bytes): 3587
+  Line count:   105
+  SHA-256:      3a4d8977faceab4a2efbeaec617f8b23e950feb8359e7470399a19bb9980dc4d
+--------------------------------------------------------------------------------

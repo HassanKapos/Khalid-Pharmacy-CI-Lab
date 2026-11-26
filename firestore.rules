@@ -1,0 +1,1971 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Core Identity, Integrity & Sanitization Primitives
+    // -------------------------------------------------------------------------
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedSuperAdmin() {
+      return isVerifiedUser()
+        && ('email' in request.auth.token)
+        && request.auth.token.email is string
+        && request.auth.token.email.lower() == 'hassan300009@gmail.com';
+    }
+
+    function isValidId(id) {
+      return id.matches('^[a-zA-Z0-9_\\-]{1,128}$');
+    }
+
+    function isValidString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isValidIdAt(listVal, idx) {
+      return listVal.size() <= idx || isValidId(listVal[idx]);
+    }
+
+    function areAllValidIds20(listVal) {
+      return isValidIdAt(listVal, 0)
+        && isValidIdAt(listVal, 1)
+        && isValidIdAt(listVal, 2)
+        && isValidIdAt(listVal, 3)
+        && isValidIdAt(listVal, 4)
+        && isValidIdAt(listVal, 5)
+        && isValidIdAt(listVal, 6)
+        && isValidIdAt(listVal, 7)
+        && isValidIdAt(listVal, 8)
+        && isValidIdAt(listVal, 9)
+        && isValidIdAt(listVal, 10)
+        && isValidIdAt(listVal, 11)
+        && isValidIdAt(listVal, 12)
+        && isValidIdAt(listVal, 13)
+        && isValidIdAt(listVal, 14)
+        && isValidIdAt(listVal, 15)
+        && isValidIdAt(listVal, 16)
+        && isValidIdAt(listVal, 17)
+        && isValidIdAt(listVal, 18)
+        && isValidIdAt(listVal, 19);
+    }
+
+    function areAllValidIds25(listVal) {
+      return areAllValidIds20(listVal)
+        && isValidIdAt(listVal, 20)
+        && isValidIdAt(listVal, 21)
+        && isValidIdAt(listVal, 22)
+        && isValidIdAt(listVal, 23)
+        && isValidIdAt(listVal, 24);
+    }
+
+    function areAllValidIds50(listVal) {
+      return areAllValidIds25(listVal)
+        && isValidIdAt(listVal, 25)
+        && isValidIdAt(listVal, 26)
+        && isValidIdAt(listVal, 27)
+        && isValidIdAt(listVal, 28)
+        && isValidIdAt(listVal, 29)
+        && isValidIdAt(listVal, 30)
+        && isValidIdAt(listVal, 31)
+        && isValidIdAt(listVal, 32)
+        && isValidIdAt(listVal, 33)
+        && isValidIdAt(listVal, 34)
+        && isValidIdAt(listVal, 35)
+        && isValidIdAt(listVal, 36)
+        && isValidIdAt(listVal, 37)
+        && isValidIdAt(listVal, 38)
+        && isValidIdAt(listVal, 39)
+        && isValidIdAt(listVal, 40)
+        && isValidIdAt(listVal, 41)
+        && isValidIdAt(listVal, 42)
+        && isValidIdAt(listVal, 43)
+        && isValidIdAt(listVal, 44)
+        && isValidIdAt(listVal, 45)
+        && isValidIdAt(listVal, 46)
+        && isValidIdAt(listVal, 47)
+        && isValidIdAt(listVal, 48)
+        && isValidIdAt(listVal, 49);
+    }
+
+    function areAllStrings5(l, o, n) {
+      return (n <= o || l[o] is string)
+        && (n <= o + 1 || l[o + 1] is string)
+        && (n <= o + 2 || l[o + 2] is string)
+        && (n <= o + 3 || l[o + 3] is string)
+        && (n <= o + 4 || l[o + 4] is string);
+    }
+
+    function areAllStrings20(l, n) {
+      return (n >= 5 ? ('' + l[0] + l[1] + l[2] + l[3] + l[4]) is string : areAllStrings5(l, 0, n))
+        && (n <= 5 || (n >= 10 ? ('' + l[5] + l[6] + l[7] + l[8] + l[9]) is string : areAllStrings5(l, 5, n)))
+        && (n <= 10 || (n >= 15 ? ('' + l[10] + l[11] + l[12] + l[13] + l[14]) is string : areAllStrings5(l, 10, n)))
+        && (n <= 15 || (n == 20 ? ('' + l[15] + l[16] + l[17] + l[18] + l[19]) is string : areAllStrings5(l, 15, n)));
+    }
+
+    function areAllValidBarcodes20(listVal) {
+      let n = listVal.size();
+      let joined = listVal.join('\n');
+      return n <= 20
+        && areAllStrings20(listVal, n)
+        && !('' in listVal)
+        && joined.matches('^[^\n]{1,64}(\n[^\n]{1,64}){0,19}$')
+        && joined.split('\n').size() == n;
+    }
+
+    function isValidBranchIdList(listVal) {
+      return listVal is list
+        && listVal.size() <= 20
+        && areAllValidIds20(listVal);
+    }
+
+    function isValidAdminUidList(listVal) {
+      return listVal is list
+        && listVal.size() <= 25
+        && areAllValidIds25(listVal);
+    }
+
+    function isValidMemberUidList(listVal) {
+      return listVal is list
+        && listVal.size() <= 50
+        && areAllValidIds50(listVal);
+    }
+
+    function isValidSecondaryBarcodes(listVal) {
+      return listVal is list
+        && listVal.size() <= 20
+        && (listVal.size() == 0 || areAllValidBarcodes20(listVal));
+    }
+
+    function userProfileExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isSuperAdmin() {
+      let profileExists = isVerifiedUser() && userProfileExists();
+      let profile = profileExists ? userProfile() : null;
+      return (!profileExists && isBootstrappedSuperAdmin())
+        || (profileExists
+          && profile.active == true
+          && profile.role == 'super_admin');
+    }
+
+    function hasBranch(branchId) {
+      let profileExists = isVerifiedUser() && isValidId(branchId) && userProfileExists();
+      let profile = profileExists ? userProfile() : null;
+      return profileExists
+        && profile.active == true
+        && profile.role in ['admin', 'cashier']
+        && profile.branchIds is list
+        && branchId in profile.branchIds;
+    }
+
+    function isBranchAdmin(branchId) {
+      let profileExists = isVerifiedUser() && userProfileExists();
+      let profile = profileExists ? userProfile() : null;
+      return (!profileExists && isBootstrappedSuperAdmin())
+        || (profileExists && profile.active == true && (
+          profile.role == 'super_admin'
+          || (profile.role == 'admin' && profile.branchIds is list && branchId in profile.branchIds)
+        ));
+    }
+
+    function isAssignedUser(branchId) {
+      let profileExists = isVerifiedUser() && userProfileExists();
+      let profile = profileExists ? userProfile() : null;
+      return (!profileExists && isBootstrappedSuperAdmin())
+        || (profileExists && profile.active == true && (
+          profile.role == 'super_admin'
+          || (profile.role in ['admin', 'cashier'] && profile.branchIds is list && branchId in profile.branchIds)
+        ));
+    }
+
+    function isAdminForAnyBranch(targetBranchIds) {
+      let profileExists = isVerifiedUser() && userProfileExists();
+      let profile = profileExists ? userProfile() : null;
+      return profileExists
+        && profile.active == true
+        && profile.role == 'admin'
+        && targetBranchIds is list
+        && profile.branchIds is list
+        && targetBranchIds.hasAny(profile.branchIds);
+    }
+
+    function isAdminForCashierBranch(cashierBranchIds) {
+      let profileExists = isVerifiedUser() && userProfileExists();
+      let profile = profileExists ? userProfile() : null;
+      return profileExists
+        && profile.active == true
+        && profile.role == 'admin'
+        && cashierBranchIds is list
+        && cashierBranchIds.size() == 1
+        && profile.branchIds is list
+        && cashierBranchIds[0] in profile.branchIds;
+    }
+
+    function branchExists(branchId) {
+      return isValidId(branchId)
+        && exists(/databases/$(database)/documents/branches/$(branchId));
+    }
+
+    function isActiveBranchDoc(branchId) {
+      return exists(/databases/$(database)/documents/branches/$(branchId))
+        && get(/databases/$(database)/documents/branches/$(branchId)).data.active == true;
+    }
+
+    function branchIsActive(branchId) {
+      return branchExists(branchId)
+        && get(/databases/$(database)/documents/branches/$(branchId)).data.active == true;
+    }
+
+    function canLinkSaleLedger(branchId, referenceId) {
+      let salePath = /databases/$(database)/documents/branches/$(branchId)/sales/$(referenceId);
+      let saleExists = isValidId(referenceId) && existsAfter(salePath);
+      let saleData = saleExists ? getAfter(salePath).data : null;
+      let existedBefore = saleExists && exists(salePath);
+      let preSaleData = existedBefore ? get(salePath).data : null;
+      let movId = incoming().id;
+      return saleExists
+        && saleData.branchId == branchId
+        && (saleData.cashierUid == request.auth.uid || isBranchAdmin(branchId))
+        && (
+          !existedBefore
+            ? (!('expectedLedgerIds' in saleData) || movId in saleData.expectedLedgerIds)
+            : (
+              preSaleData.get('syncState', 'complete') == 'pending_ledger'
+              && 'expectedLedgerIds' in preSaleData
+              && movId in preSaleData.expectedLedgerIds
+            )
+        );
+    }
+
+    function isValidSaleCompletionLedgerDoc(branchId, saleId, movId) {
+      let d = getAfter(/databases/$(database)/documents/branches/$(branchId)/inventory_ledger/$(movId)).data;
+      return d.type == 'SALE'
+        && d.referenceId == saleId
+        && d.quantityDelta < 0
+        && d.baseUnitsDelta < 0;
+    }
+
+    function isSaleLedgerVerifiedAt(branchId, saleId, ids, s, n, offset) {
+      return n <= offset || isValidSaleCompletionLedgerDoc(branchId, saleId, ids[s + offset]);
+    }
+
+    function areSaleLedgerSliceVerified(branchId, saleId, ids, s, n) {
+      return n >= 1
+        && n <= 8
+        && s + n <= ids.size()
+        && isSaleLedgerVerifiedAt(branchId, saleId, ids, s, n, 0)
+        && isSaleLedgerVerifiedAt(branchId, saleId, ids, s, n, 1)
+        && isSaleLedgerVerifiedAt(branchId, saleId, ids, s, n, 2)
+        && isSaleLedgerVerifiedAt(branchId, saleId, ids, s, n, 3)
+        && isSaleLedgerVerifiedAt(branchId, saleId, ids, s, n, 4)
+        && isSaleLedgerVerifiedAt(branchId, saleId, ids, s, n, 5)
+        && isSaleLedgerVerifiedAt(branchId, saleId, ids, s, n, 6)
+        && isSaleLedgerVerifiedAt(branchId, saleId, ids, s, n, 7);
+    }
+
+    function canFinalizePendingSale(branchId, saleId, d, e) {
+      let elc = e.get('expectedLedgerCount', 0);
+      let prev = e.get('verifiedLedgerCount', 0);
+      let nextState = d.get('syncState', '');
+      let nextV = 'verifiedLedgerCount' in d
+        ? d.verifiedLedgerCount
+        : (nextState == 'complete' ? elc : -1);
+      return e.get('syncState', 'complete') == 'pending_ledger'
+        && 'expectedLedgerCount' in e
+        && 'expectedLedgerIds' in e
+        && d.updatedAt == request.time
+        && d.diff(e).affectedKeys().hasOnly(['syncState', 'verifiedLedgerCount', 'updatedAt'])
+        && prev is int && prev >= 0 && prev < elc
+        && nextV is int && nextV > prev && nextV <= elc
+        && (nextState == 'pending_ledger' ? nextV < elc : (nextState == 'complete' && nextV == elc))
+        && areSaleLedgerSliceVerified(branchId, saleId, e.expectedLedgerIds, prev, nextV - prev)
+        && isActiveBranchDoc(branchId)
+        && (e.cashierUid == request.auth.uid ? isAssignedUser(branchId) : isBranchAdmin(branchId));
+    }
+
+    function canAdminUpdateSaleMetadata(branchId, saleId, d, e) {
+      return d.diff(e).affectedKeys().hasOnly(['customer', 'bankakTransactionId', 'updatedAt'])
+        && d.updatedAt == request.time
+        && isValidSale(d, branchId, saleId)
+        && isActiveBranchDoc(branchId)
+        && isBranchAdmin(branchId);
+    }
+
+    function isValidInitialLedgerForMedicine(branchId, movementId, data) {
+      let medData = get(/databases/$(database)/documents/branches/$(branchId)/medicines/$(data.medicineId)).data;
+      let ev = 'openingStockEvidence' in medData ? medData.openingStockEvidence : null;
+      return data.unit == 'pack'
+        && data.quantityDelta > 0
+        && data.baseUnitsDelta > 0
+        && ev is map
+        && ev.mode == 'POSITIVE'
+        && ev.initialLedgerMovementId == movementId
+        && ev.intendedInitialStock == data.quantityDelta
+        && ev.intendedBaseUnits == data.baseUnitsDelta
+        && (!('baseUnitsPerPack' in medData) || data.baseUnitsDelta == data.quantityDelta * medData.baseUnitsPerPack);
+    }
+
+    function canCreateInventoryLedger(branchId, movementId) {
+      let data = incoming();
+      return isVerifiedUser()
+        && isValidId(branchId)
+        && isValidId(movementId)
+        && isValidInventoryLedger(data, branchId, movementId)
+        && data.userId == request.auth.uid
+        && data.createdAt == request.time
+        && isActiveBranchDoc(branchId)
+        && exists(/databases/$(database)/documents/branches/$(branchId)/medicines/$(data.medicineId))
+        && (
+          (
+            data.type == 'SALE'
+            && isAssignedUser(branchId)
+            && 'referenceId' in data
+            && canLinkSaleLedger(branchId, data.referenceId)
+          )
+          || (
+            data.type != 'SALE'
+            && isBranchAdmin(branchId)
+            && (data.type != 'INITIAL' || isValidInitialLedgerForMedicine(branchId, movementId, data))
+          )
+        );
+    }
+
+    function canCreateSale(branchId, saleId) {
+      let data = incoming();
+      return isValidId(branchId)
+        && isValidId(saleId)
+        && isValidSale(data, branchId, saleId)
+        && data.createdAt == request.time
+        && isActiveBranchDoc(branchId)
+        && (data.cashierUid == request.auth.uid ? isAssignedUser(branchId) : isBranchAdmin(branchId))
+        && (
+          !('syncState' in data)
+          || (data.syncState == 'pending_ledger' && data.get('verifiedLedgerCount', 0) == 0)
+          || (
+            data.syncState == 'complete'
+            && data.expectedLedgerCount <= 7
+            && areSaleLedgerSliceVerified(branchId, saleId, data.expectedLedgerIds, 0, data.expectedLedgerCount)
+          )
+        );
+    }
+
+    function isValidStocktakingStatus(status) {
+      return status in [
+        'active', 'in_progress', 'reviewing',
+        'syncing_adjustments', 'sync_completed_unverified',
+        'committed', 'cancelled',
+        'IN_PROGRESS', 'COMMITTED', 'CANCELLED'
+      ];
+    }
+
+    function isTerminalStocktakingStatus(status) {
+      return status in [
+        'sync_completed_unverified',
+        'committed',
+        'cancelled',
+        'COMMITTED',
+        'CANCELLED'
+      ];
+    }
+
+    function isValidClientAccountingStatus(status) {
+      return status in ['open', 'unverified_client_sync', 'cancelled'];
+    }
+
+    function parentStocktakingItemsAreWritable(branchId, sessionId) {
+      let sessPath = /databases/$(database)/documents/branches/$(branchId)/stocktaking_sessions/$(sessionId);
+      return exists(sessPath)
+        && get(sessPath).data.status in ['active', 'in_progress', 'reviewing']
+        && get(sessPath).data.get('accountingStatus', 'open') == 'open';
+    }
+
+    // -------------------------------------------------------------------------
+    // Category Sanitization & Lowercase Duplicate Protection (Max 12 Cached)
+    // -------------------------------------------------------------------------
+    function isValidCategoryName(val) {
+      return val is string
+        && val.size() >= 1
+        && val.size() <= 80
+        && val.trim() == val
+        && !val.matches('.*[/\\r\\n\\t].*')
+        && !(val in ['.', '..'])
+        && !val.matches('^__.*__$');
+    }
+
+    function isNonDefaultCategory(val) {
+      return !(val.lower() in ['antibiotics', 'analgesics', 'chronic', 'vitamins']);
+    }
+
+    function isValidCategoryListItemAt(listVal, idx) {
+      return listVal.size() <= idx
+        || (isValidCategoryName(listVal[idx]) && isNonDefaultCategory(listVal[idx]));
+    }
+
+    function areDistinctCatPair(listVal, i, j) {
+      return listVal.size() <= j || listVal[i].lower() != listVal[j].lower();
+    }
+
+    function areDistinctCatRow0(listVal) {
+      return areDistinctCatPair(listVal, 0, 1)
+        && areDistinctCatPair(listVal, 0, 2)
+        && areDistinctCatPair(listVal, 0, 3)
+        && areDistinctCatPair(listVal, 0, 4)
+        && areDistinctCatPair(listVal, 0, 5)
+        && areDistinctCatPair(listVal, 0, 6)
+        && areDistinctCatPair(listVal, 0, 7)
+        && areDistinctCatPair(listVal, 0, 8)
+        && areDistinctCatPair(listVal, 0, 9)
+        && areDistinctCatPair(listVal, 0, 10)
+        && areDistinctCatPair(listVal, 0, 11);
+    }
+
+    function areDistinctCatRow1(listVal) {
+      return areDistinctCatPair(listVal, 1, 2)
+        && areDistinctCatPair(listVal, 1, 3)
+        && areDistinctCatPair(listVal, 1, 4)
+        && areDistinctCatPair(listVal, 1, 5)
+        && areDistinctCatPair(listVal, 1, 6)
+        && areDistinctCatPair(listVal, 1, 7)
+        && areDistinctCatPair(listVal, 1, 8)
+        && areDistinctCatPair(listVal, 1, 9)
+        && areDistinctCatPair(listVal, 1, 10)
+        && areDistinctCatPair(listVal, 1, 11);
+    }
+
+    function areDistinctCatRow2(listVal) {
+      return areDistinctCatPair(listVal, 2, 3)
+        && areDistinctCatPair(listVal, 2, 4)
+        && areDistinctCatPair(listVal, 2, 5)
+        && areDistinctCatPair(listVal, 2, 6)
+        && areDistinctCatPair(listVal, 2, 7)
+        && areDistinctCatPair(listVal, 2, 8)
+        && areDistinctCatPair(listVal, 2, 9)
+        && areDistinctCatPair(listVal, 2, 10)
+        && areDistinctCatPair(listVal, 2, 11);
+    }
+
+    function areDistinctCatRow3(listVal) {
+      return areDistinctCatPair(listVal, 3, 4)
+        && areDistinctCatPair(listVal, 3, 5)
+        && areDistinctCatPair(listVal, 3, 6)
+        && areDistinctCatPair(listVal, 3, 7)
+        && areDistinctCatPair(listVal, 3, 8)
+        && areDistinctCatPair(listVal, 3, 9)
+        && areDistinctCatPair(listVal, 3, 10)
+        && areDistinctCatPair(listVal, 3, 11);
+    }
+
+    function areDistinctCatRow4(listVal) {
+      return areDistinctCatPair(listVal, 4, 5)
+        && areDistinctCatPair(listVal, 4, 6)
+        && areDistinctCatPair(listVal, 4, 7)
+        && areDistinctCatPair(listVal, 4, 8)
+        && areDistinctCatPair(listVal, 4, 9)
+        && areDistinctCatPair(listVal, 4, 10)
+        && areDistinctCatPair(listVal, 4, 11);
+    }
+
+    function areDistinctCatRow5(listVal) {
+      return areDistinctCatPair(listVal, 5, 6)
+        && areDistinctCatPair(listVal, 5, 7)
+        && areDistinctCatPair(listVal, 5, 8)
+        && areDistinctCatPair(listVal, 5, 9)
+        && areDistinctCatPair(listVal, 5, 10)
+        && areDistinctCatPair(listVal, 5, 11);
+    }
+
+    function areDistinctCatRest(listVal) {
+      return areDistinctCatPair(listVal, 6, 7)
+        && areDistinctCatPair(listVal, 6, 8)
+        && areDistinctCatPair(listVal, 6, 9)
+        && areDistinctCatPair(listVal, 6, 10)
+        && areDistinctCatPair(listVal, 6, 11)
+        && areDistinctCatPair(listVal, 7, 8)
+        && areDistinctCatPair(listVal, 7, 9)
+        && areDistinctCatPair(listVal, 7, 10)
+        && areDistinctCatPair(listVal, 7, 11)
+        && areDistinctCatPair(listVal, 8, 9)
+        && areDistinctCatPair(listVal, 8, 10)
+        && areDistinctCatPair(listVal, 8, 11)
+        && areDistinctCatPair(listVal, 9, 10)
+        && areDistinctCatPair(listVal, 9, 11)
+        && areDistinctCatPair(listVal, 10, 11);
+    }
+
+    function areAllValidUniqueLowerCategories12(listVal) {
+      return isValidCategoryListItemAt(listVal, 0)
+        && isValidCategoryListItemAt(listVal, 1)
+        && isValidCategoryListItemAt(listVal, 2)
+        && isValidCategoryListItemAt(listVal, 3)
+        && isValidCategoryListItemAt(listVal, 4)
+        && isValidCategoryListItemAt(listVal, 5)
+        && isValidCategoryListItemAt(listVal, 6)
+        && isValidCategoryListItemAt(listVal, 7)
+        && isValidCategoryListItemAt(listVal, 8)
+        && isValidCategoryListItemAt(listVal, 9)
+        && isValidCategoryListItemAt(listVal, 10)
+        && isValidCategoryListItemAt(listVal, 11)
+        && areDistinctCatRow0(listVal)
+        && areDistinctCatRow1(listVal)
+        && areDistinctCatRow2(listVal)
+        && areDistinctCatRow3(listVal)
+        && areDistinctCatRow4(listVal)
+        && areDistinctCatRow5(listVal)
+        && areDistinctCatRest(listVal);
+    }
+
+    // -------------------------------------------------------------------------
+    // Invoice Allocations Validation (Max 12 Unique Allocations per Payment)
+    // -------------------------------------------------------------------------
+    function isValidInvoiceAllocationAt(listVal, idx) {
+      return listVal.size() <= idx || (
+        listVal[idx] is map
+        && listVal[idx].keys().hasAll(['invoiceId', 'amount'])
+        && listVal[idx].keys().hasOnly(['invoiceId', 'invoiceNumber', 'amount'])
+        && isValidId(listVal[idx].invoiceId)
+        && (!('invoiceNumber' in listVal[idx]) || isValidString(listVal[idx].invoiceNumber, 0, 64))
+        && listVal[idx].amount is number
+        && listVal[idx].amount > 0
+      );
+    }
+
+    function areAllocIdsDistinct(listVal, i, j) {
+      return listVal.size() <= j || listVal[i].invoiceId != listVal[j].invoiceId;
+    }
+
+    function allocAmountAt(listVal, idx) {
+      return listVal.size() <= idx ? 0 : listVal[idx].amount;
+    }
+
+    function areAllAllocIdsUnique12(listVal) {
+      return areAllocIdsDistinct(listVal, 0, 1)
+        && areAllocIdsDistinct(listVal, 0, 2)
+        && areAllocIdsDistinct(listVal, 0, 3)
+        && areAllocIdsDistinct(listVal, 0, 4)
+        && areAllocIdsDistinct(listVal, 0, 5)
+        && areAllocIdsDistinct(listVal, 0, 6)
+        && areAllocIdsDistinct(listVal, 0, 7)
+        && areAllocIdsDistinct(listVal, 0, 8)
+        && areAllocIdsDistinct(listVal, 0, 9)
+        && areAllocIdsDistinct(listVal, 0, 10)
+        && areAllocIdsDistinct(listVal, 0, 11)
+        && areAllocIdsDistinct(listVal, 1, 2)
+        && areAllocIdsDistinct(listVal, 1, 3)
+        && areAllocIdsDistinct(listVal, 1, 4)
+        && areAllocIdsDistinct(listVal, 1, 5)
+        && areAllocIdsDistinct(listVal, 1, 6)
+        && areAllocIdsDistinct(listVal, 1, 7)
+        && areAllocIdsDistinct(listVal, 1, 8)
+        && areAllocIdsDistinct(listVal, 1, 9)
+        && areAllocIdsDistinct(listVal, 1, 10)
+        && areAllocIdsDistinct(listVal, 1, 11)
+        && areAllocIdsDistinct(listVal, 2, 3)
+        && areAllocIdsDistinct(listVal, 2, 4)
+        && areAllocIdsDistinct(listVal, 2, 5)
+        && areAllocIdsDistinct(listVal, 2, 6)
+        && areAllocIdsDistinct(listVal, 2, 7)
+        && areAllocIdsDistinct(listVal, 2, 8)
+        && areAllocIdsDistinct(listVal, 2, 9)
+        && areAllocIdsDistinct(listVal, 2, 10)
+        && areAllocIdsDistinct(listVal, 2, 11)
+        && areAllocIdsDistinct(listVal, 3, 4)
+        && areAllocIdsDistinct(listVal, 3, 5)
+        && areAllocIdsDistinct(listVal, 3, 6)
+        && areAllocIdsDistinct(listVal, 3, 7)
+        && areAllocIdsDistinct(listVal, 3, 8)
+        && areAllocIdsDistinct(listVal, 3, 9)
+        && areAllocIdsDistinct(listVal, 3, 10)
+        && areAllocIdsDistinct(listVal, 3, 11)
+        && areAllocIdsDistinct(listVal, 4, 5)
+        && areAllocIdsDistinct(listVal, 4, 6)
+        && areAllocIdsDistinct(listVal, 4, 7)
+        && areAllocIdsDistinct(listVal, 4, 8)
+        && areAllocIdsDistinct(listVal, 4, 9)
+        && areAllocIdsDistinct(listVal, 4, 10)
+        && areAllocIdsDistinct(listVal, 4, 11)
+        && areAllocIdsDistinct(listVal, 5, 6)
+        && areAllocIdsDistinct(listVal, 5, 7)
+        && areAllocIdsDistinct(listVal, 5, 8)
+        && areAllocIdsDistinct(listVal, 5, 9)
+        && areAllocIdsDistinct(listVal, 5, 10)
+        && areAllocIdsDistinct(listVal, 5, 11)
+        && areAllocIdsDistinct(listVal, 6, 7)
+        && areAllocIdsDistinct(listVal, 6, 8)
+        && areAllocIdsDistinct(listVal, 6, 9)
+        && areAllocIdsDistinct(listVal, 6, 10)
+        && areAllocIdsDistinct(listVal, 6, 11)
+        && areAllocIdsDistinct(listVal, 7, 8)
+        && areAllocIdsDistinct(listVal, 7, 9)
+        && areAllocIdsDistinct(listVal, 7, 10)
+        && areAllocIdsDistinct(listVal, 7, 11)
+        && areAllocIdsDistinct(listVal, 8, 9)
+        && areAllocIdsDistinct(listVal, 8, 10)
+        && areAllocIdsDistinct(listVal, 8, 11)
+        && areAllocIdsDistinct(listVal, 9, 10)
+        && areAllocIdsDistinct(listVal, 9, 11)
+        && areAllocIdsDistinct(listVal, 10, 11);
+    }
+
+    function sumAllocationAmounts12(listVal) {
+      return allocAmountAt(listVal, 0)
+        + allocAmountAt(listVal, 1)
+        + allocAmountAt(listVal, 2)
+        + allocAmountAt(listVal, 3)
+        + allocAmountAt(listVal, 4)
+        + allocAmountAt(listVal, 5)
+        + allocAmountAt(listVal, 6)
+        + allocAmountAt(listVal, 7)
+        + allocAmountAt(listVal, 8)
+        + allocAmountAt(listVal, 9)
+        + allocAmountAt(listVal, 10)
+        + allocAmountAt(listVal, 11);
+    }
+
+    function isValidInvoiceAllocations12(allocs, txAmount) {
+      return allocs is list
+        && allocs.size() <= 12
+        && isValidInvoiceAllocationAt(allocs, 0)
+        && isValidInvoiceAllocationAt(allocs, 1)
+        && isValidInvoiceAllocationAt(allocs, 2)
+        && isValidInvoiceAllocationAt(allocs, 3)
+        && isValidInvoiceAllocationAt(allocs, 4)
+        && isValidInvoiceAllocationAt(allocs, 5)
+        && isValidInvoiceAllocationAt(allocs, 6)
+        && isValidInvoiceAllocationAt(allocs, 7)
+        && isValidInvoiceAllocationAt(allocs, 8)
+        && isValidInvoiceAllocationAt(allocs, 9)
+        && isValidInvoiceAllocationAt(allocs, 10)
+        && isValidInvoiceAllocationAt(allocs, 11)
+        && areAllAllocIdsUnique12(allocs)
+        && sumAllocationAmounts12(allocs) <= txAmount + 0.01;
+    }
+
+    // -------------------------------------------------------------------------
+    // Entity Validation Blueprints (Anti-Update-Gap)
+    // -------------------------------------------------------------------------
+    function isValidUserProfile(data, targetUid) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'branchIds', 'active', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'branchIds', 'activeBranchId', 'active', 'inviteId', 'createdAt', 'updatedAt'])
+        && data.uid == targetUid
+        && isValidId(data.uid)
+        && isValidString(data.email, 3, 254)
+        && data.email == data.email.lower()
+        && isValidString(data.displayName, 1, 120)
+        && data.role in ['super_admin', 'admin', 'cashier']
+        && isValidBranchIdList(data.branchIds)
+        && (data.role == 'super_admin' || data.branchIds.size() >= 1)
+        && (data.role != 'cashier' || data.branchIds.size() == 1)
+        && (!('activeBranchId' in data) || data.activeBranchId == null || isValidId(data.activeBranchId))
+        && (!('inviteId' in data) || isValidId(data.inviteId))
+        && data.active is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidStaffInvite(data, inviteId) {
+      return data.keys().hasAll(['id', 'email', 'displayName', 'role', 'branchIds', 'active', 'invitedByUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'email', 'displayName', 'role', 'branchIds', 'active', 'invitedByUid', 'claimedUid', 'createdAt', 'updatedAt'])
+        && data.id == inviteId
+        && isValidId(data.id)
+        && isValidString(data.email, 3, 254)
+        && data.email == data.email.lower()
+        && isValidString(data.displayName, 1, 120)
+        && data.role in ['super_admin', 'admin', 'cashier']
+        && isValidBranchIdList(data.branchIds)
+        && (data.role == 'super_admin' || data.branchIds.size() >= 1)
+        && (data.role != 'cashier' || data.branchIds.size() == 1)
+        && data.active is bool
+        && isValidId(data.invitedByUid)
+        && (!('claimedUid' in data) || data.claimedUid == null || isValidId(data.claimedUid))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidBranch(data, branchId) {
+      return data.keys().hasAll(['id', 'code', 'nameAr', 'nameEn', 'active', 'adminUids', 'memberUids', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'code', 'nameAr', 'nameEn', 'city', 'phone', 'active', 'adminUids', 'memberUids', 'createdAt', 'updatedAt'])
+        && data.id == branchId
+        && isValidId(data.id)
+        && isValidString(data.code, 1, 32)
+        && isValidString(data.nameAr, 1, 120)
+        && isValidString(data.nameEn, 1, 120)
+        && (!('city' in data) || isValidString(data.city, 0, 120))
+        && (!('phone' in data) || isValidString(data.phone, 0, 40))
+        && data.active is bool
+        && isValidAdminUidList(data.adminUids)
+        && isValidMemberUidList(data.memberUids)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidOpeningStockEvidence(ev, baseUnitsPerPack) {
+      return ev is map
+        && ev.keys().hasOnly(['mode', 'intendedInitialStock', 'intendedBaseUnits', 'initialLedgerMovementId', 'recordedAt'])
+        && (ev.recordedAt is timestamp || ev.recordedAt.matches('(?s)^.{10,64}$'))
+        && ev.intendedBaseUnits is int
+        && (
+          ev.mode == 'POSITIVE'
+            ? (
+              ev.intendedInitialStock > 0
+              && ev.intendedBaseUnits > 0
+              && ev.intendedBaseUnits == ev.intendedInitialStock * baseUnitsPerPack
+              && isValidId(ev.initialLedgerMovementId)
+            )
+            : (
+              ev.mode in ['OMITTED', 'EXPLICIT_ZERO']
+              && ev.intendedInitialStock == 0
+              && ev.intendedBaseUnits == 0
+              && ev.get('initialLedgerMovementId', null) == null
+            )
+        );
+    }
+
+    function isValidMedicineUnitDefinition(d, u) {
+      return u is map
+        && u.keys().hasOnly(['mode', 'dosageForm', 'baseUnitLabel', 'baseUnitsPerPack', 'stripsPerPack', 'pillsPerStrip', 'verificationState'])
+        && u.dosageForm.matches('(?s)^.{1,48}$') && u.dosageForm != 'Unknown'
+        && u.baseUnitLabel.matches('(?s)^.{1,32}$')
+        && u.baseUnitsPerPack is int && u.baseUnitsPerPack >= 1 && u.baseUnitsPerPack <= 100000
+        && u.get('verificationState', 'VERIFIED') == 'VERIFIED'
+        && d.baseUnitsPerPack == u.baseUnitsPerPack
+        && d.dosageForm == u.dosageForm
+        && d.baseUnitLabel == u.baseUnitLabel
+        && (
+          u.mode == 'DIRECT_PACK'
+            ? (
+              !('stripsPerPack' in u) && !('pillsPerStrip' in u)
+              && !('stripsPerPack' in d) && !('pillsPerStrip' in d)
+              && d.get('sellStrip', false) == false
+              && d.get('sellPill', false) == false
+              && d.get('sellPriceStrip', null) == null
+              && d.get('sellPricePill', null) == null
+            )
+            : (
+              u.mode == 'SOLID_TWO_LEVEL'
+              && u.stripsPerPack is int && u.stripsPerPack >= 1
+              && u.pillsPerStrip is int && u.pillsPerStrip >= 1
+              && u.stripsPerPack * u.pillsPerStrip == u.baseUnitsPerPack
+              && d.stripsPerPack == u.stripsPerPack
+              && d.pillsPerStrip == u.pillsPerStrip
+            )
+        );
+    }
+
+    function isV2MedicineKeys(ks) {
+      return ks.hasAny([
+        'unitSchemaVersion', 'unitDefinition', 'dosageForm', 'baseUnitsPerPack',
+        'baseUnitLabel', 'packingLocked', 'packingLockedAt', 'packingLockReason',
+        'unitMigrationStatus', 'configStatus', 'openingStockEvidence', 'syncVersion'
+      ]);
+    }
+
+    function isValidMedicineV2Metadata(data, checkEvidence, checkUnitDef) {
+      let pla = data.get('packingLockedAt', null);
+      let plr = data.get('packingLockReason', null);
+      return data.unitSchemaVersion is int && data.unitSchemaVersion >= 2
+        && data.configStatus == 'VERIFIED'
+        && data.unitMigrationStatus in ['VERIFIED', 'NATIVE_V2']
+        && data.get('packingLocked', false) is bool
+        && (pla == null || pla is timestamp || pla.matches('(?s)^.{1,64}$'))
+        && (plr == null || plr.matches('(?s)^.{1,128}$'))
+        && data.syncVersion is int && data.syncVersion >= 1
+        && (!checkUnitDef || isValidMedicineUnitDefinition(data, data.unitDefinition))
+        && (!checkEvidence || isValidOpeningStockEvidence(data.openingStockEvidence, data.baseUnitsPerPack));
+    }
+
+    function isValidMedicineCore(data, branchId, medicineId, checkBarcodes, checkEvidence, checkUnitDef) {
+      let ks = data.keys();
+      let isV2 = isV2MedicineKeys(ks);
+      let sps = data.get('sellPriceStrip', 0);
+      let spp = data.get('sellPricePill', 0);
+      let aa = data.get('archivedAt', null);
+      let ab = data.get('archivedByUid', null);
+      return ks.hasOnly([
+          'id', 'branchId', 'barcode', 'name', 'category', 'minStock',
+          'buyPrice', 'sellPrice', 'sellPriceStrip', 'sellPricePill',
+          'sellPack', 'sellStrip', 'sellPill', 'expiry', 'unitType',
+          'stripsPerPack', 'pillsPerStrip', 'batchNumber', 'secondaryBarcodes',
+          'dosageForm', 'unitDefinition', 'baseUnitsPerPack', 'baseUnitLabel',
+          'packingLocked', 'packingLockedAt', 'packingLockReason',
+          'unitMigrationStatus', 'configStatus', 'unitSchemaVersion',
+          'openingStockEvidence', 'syncVersion',
+          'archived', 'archivedAt', 'archivedByUid',
+          'createdAt', 'updatedAt'
+        ])
+        && data.id == medicineId
+        && data.branchId == branchId
+        && data.name.matches('(?s)^.{1,200}$')
+        && data.get('barcode', '').matches('(?s)^.{0,64}$')
+        && data.get('category', '').matches('(?s)^.{0,80}$')
+        && data.get('minStock', 0) >= 0
+        && data.buyPrice >= 0
+        && data.sellPrice >= 0
+        && (sps == null || sps >= 0)
+        && (spp == null || spp >= 0)
+        && data.get('sellPack', true) is bool
+        && data.get('sellStrip', false) is bool
+        && data.get('sellPill', false) is bool
+        && data.get('expiry', '').matches('(?s)^.{0,32}$')
+        && data.get('unitType', 'x').matches('(?s)^.{1,16}$')
+        && (isV2 || (
+          (!('stripsPerPack' in data) || (data.stripsPerPack is int && data.stripsPerPack >= 1))
+          && (!('pillsPerStrip' in data) || (data.pillsPerStrip is int && data.pillsPerStrip >= 1))
+        ))
+        && data.get('batchNumber', '').matches('(?s)^.{0,64}$')
+        && (!checkBarcodes || !('secondaryBarcodes' in data) || isValidSecondaryBarcodes(data.secondaryBarcodes))
+        && data.get('archived', false) is bool
+        && (aa == null || aa is timestamp)
+        && (ab == null || isValidId(ab))
+        && (!isV2 || isValidMedicineV2Metadata(data, checkEvidence, checkUnitDef))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidMedicine(data, branchId, medicineId) {
+      return isValidMedicineCore(data, branchId, medicineId, true, true, true);
+    }
+
+    function canCreateMedicine(branchId, medicineId) {
+      let d = request.resource.data;
+      return isValidId(branchId)
+        && isValidId(medicineId)
+        && isValidMedicineCore(d, branchId, medicineId, true, true, true)
+        && d.createdAt == request.time
+        && d.updatedAt == request.time
+        && isBranchAdmin(branchId)
+        && isActiveBranchDoc(branchId);
+    }
+
+    function canUpdateMedicine(branchId, medicineId) {
+      let d = request.resource.data;
+      let e = resource.data;
+      let changed = d.diff(e).affectedKeys();
+      let prevV2 = isV2MedicineKeys(e.keys());
+      let locked = e.get('packingLocked', false) == true;
+      let unitTouched = !prevV2 || changed.hasAny([
+        'unitDefinition', 'dosageForm', 'baseUnitLabel', 'baseUnitsPerPack',
+        'stripsPerPack', 'pillsPerStrip', 'sellStrip', 'sellPill',
+        'sellPriceStrip', 'sellPricePill'
+      ]);
+      return isValidId(branchId)
+        && isValidId(medicineId)
+        && d.updatedAt == request.time
+        && !changed.hasAny(['id', 'branchId', 'createdAt', 'openingStockEvidence'])
+        && (!prevV2 || ('unitSchemaVersion' in d && d.unitSchemaVersion >= e.get('unitSchemaVersion', 2)))
+        && (
+          !locked
+          || (
+            d.get('packingLocked', false) == true
+            && !changed.hasAny([
+              'packingLocked', 'packingLockedAt', 'packingLockReason',
+              'stripsPerPack', 'pillsPerStrip', 'baseUnitsPerPack', 'baseUnitLabel',
+              'dosageForm', 'unitType', 'unitDefinition', 'unitSchemaVersion',
+              'configStatus', 'unitMigrationStatus',
+              'sellPack', 'sellStrip', 'sellPill'
+            ])
+          )
+        )
+        && (!('syncVersion' in e) || ('syncVersion' in d && d.syncVersion is int && d.syncVersion > e.syncVersion))
+        && isValidMedicineCore(d, branchId, medicineId, changed.hasAny(['secondaryBarcodes']), !prevV2, unitTouched)
+        && isBranchAdmin(branchId)
+        && isActiveBranchDoc(branchId);
+    }
+
+    function isValidInventoryLedger(data, branchId, movementId) {
+      return data.keys().hasOnly([
+          'id', 'branchId', 'medicineId', 'batchNumber', 'expiry', 'type', 'unit',
+          'quantityDelta', 'baseUnitsDelta', 'costPerUnit', 'costPerBaseUnit',
+          'referenceId', 'invoiceNumber', 'deviceId', 'userId', 'employeeName',
+          'notes', 'timestamp', 'createdAt'
+        ])
+        && data.id == movementId
+        && data.branchId == branchId
+        && isValidId(data.medicineId)
+        && data.type in ['INITIAL', 'SALE', 'PURCHASE', 'RETURN', 'DAMAGE', 'ADJUSTMENT']
+        && data.unit in ['pack', 'strip', 'pill']
+        && data.quantityDelta is number && data.quantityDelta != 0
+        && data.baseUnitsDelta is number && data.baseUnitsDelta != 0
+        && (data.type != 'SALE' || (data.quantityDelta < 0 && data.baseUnitsDelta < 0))
+        && (data.type != 'DAMAGE' || (data.quantityDelta < 0 && data.baseUnitsDelta < 0))
+        && (!(data.type in ['INITIAL', 'PURCHASE', 'RETURN']) || (data.quantityDelta > 0 && data.baseUnitsDelta > 0))
+        && isValidId(data.userId)
+        && (!('costPerUnit' in data) || (data.costPerUnit is number && data.costPerUnit >= 0))
+        && (!('costPerBaseUnit' in data) || (data.costPerBaseUnit is number && data.costPerBaseUnit >= 0))
+        && (!('batchNumber' in data) || (data.batchNumber is string && data.batchNumber.size() <= 64))
+        && (!('expiry' in data) || (data.expiry is string && data.expiry.size() <= 32))
+        && (!('referenceId' in data) || (data.referenceId is string && data.referenceId.size() <= 128))
+        && (!('invoiceNumber' in data) || (data.invoiceNumber is string && data.invoiceNumber.size() <= 64))
+        && (!('deviceId' in data) || (data.deviceId is string && data.deviceId.size() <= 128))
+        && (!('employeeName' in data) || (data.employeeName is string && data.employeeName.size() <= 120))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 500))
+        && (!('timestamp' in data) || (data.timestamp is string && data.timestamp.size() <= 64))
+        && data.createdAt is timestamp;
+    }
+
+    function isValidExpectedLedgerIds(ids, elc) {
+      let n = ids is list ? ids.size() : -1;
+      let joined = n >= 1 && n <= 500 ? ids.join('\n') : '';
+      return n == elc
+        && n >= 1
+        && n <= 500
+        && ids.toSet().size() == n
+        && ids.toSet() == joined.split('\n').toSet()
+        && joined.matches('^([a-zA-Z0-9_\\-]{1,128}\\n)*[a-zA-Z0-9_\\-]{1,128}$');
+    }
+
+    function isValidSale(data, branchId, saleId) {
+      let net = data.subtotal - data.discount;
+      let hasSyncMeta = data.keys().hasAny(['syncState', 'expectedLedgerCount', 'expectedLedgerIds', 'verifiedLedgerCount']);
+      let elc = data.get('expectedLedgerCount', 0);
+      let vlc = data.get('verifiedLedgerCount', 0);
+      return data.keys().hasOnly([
+          'id', 'branchId', 'invoiceNumber', 'customer', 'time', 'timestamp',
+          'items', 'itemsCount', 'subtotal', 'discount', 'total',
+          'costOfGoods', 'grossProfit', 'netProfit',
+          'syncState', 'expectedLedgerCount', 'expectedLedgerIds', 'verifiedLedgerCount', 'syncOperationId',
+          'paymentMethod', 'bankakTransactionId', 'cashierUid', 'cashierName', 'deviceId', 'createdAt', 'updatedAt'
+        ])
+        && data.id == saleId
+        && data.branchId == branchId
+        && data.invoiceNumber.matches('(?s)^.{1,64}$')
+        && data.get('customer', '').matches('(?s)^.{0,160}$')
+        && data.get('time', '').matches('(?s)^.{0,32}$')
+        && data.get('timestamp', '').matches('(?s)^.{0,64}$')
+        && data.items is list && data.items.size() >= 1 && data.items.size() <= 100
+        && data.itemsCount == data.items.size()
+        && data.subtotal >= 0
+        && data.discount >= 0 && data.discount <= data.subtotal
+        && data.total >= 0
+        && data.total >= net - 0.01 && data.total <= net + 0.01
+        && data.get('costOfGoods', 0) >= 0
+        && data.get('grossProfit', 0) is number
+        && data.get('netProfit', 0) is number
+        && data.paymentMethod in ['Cash', 'Card', 'Bankak']
+        && data.get('bankakTransactionId', '').matches('(?s)^.{0,128}$')
+        && isValidId(data.cashierUid)
+        && data.get('cashierName', '').matches('(?s)^.{0,120}$')
+        && data.get('deviceId', '').matches('(?s)^.{0,128}$')
+        && (
+          !hasSyncMeta
+          || (
+            data.get('syncState', '') in ['pending_ledger', 'complete']
+            && elc is int
+            && isValidExpectedLedgerIds(data.get('expectedLedgerIds', null), elc)
+            && (
+              !('verifiedLedgerCount' in data)
+              || (
+                vlc is int && vlc >= 0 && vlc <= elc
+                && (data.syncState == 'pending_ledger' ? vlc < elc : vlc == elc)
+              )
+            )
+          )
+        )
+        && data.get('syncOperationId', 'x').matches('(?s)^.{1,128}$')
+        && data.createdAt is timestamp
+        && data.get('updatedAt', data.createdAt) is timestamp;
+    }
+
+    function isValidSupplier(data, branchId, supplierId) {
+      return data.keys().hasAll(['id', 'branchId', 'balance', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'id', 'branchId', 'name', 'nameAr', 'nameEn', 'contactPerson',
+          'phone', 'city', 'balance', 'terms', 'status', 'email',
+          'address', 'taxNumber', 'notes', 'legacyBalance', 'openingBalanceReviewed',
+          'archived', 'archivedAt', 'archivedByUid',
+          'createdAt', 'updatedAt'
+        ])
+        && data.id == supplierId
+        && data.branchId == branchId
+        && isValidId(data.id)
+        && isValidId(data.branchId)
+        && (!('name' in data) || data.name is map || isValidString(data.name, 0, 160))
+        && (!('nameAr' in data) || isValidString(data.nameAr, 0, 160))
+        && (!('nameEn' in data) || isValidString(data.nameEn, 0, 160))
+        && (!('contactPerson' in data) || isValidString(data.contactPerson, 0, 120))
+        && (!('phone' in data) || isValidString(data.phone, 0, 40))
+        && (!('city' in data) || isValidString(data.city, 0, 120))
+        && data.balance is number
+        && (!('terms' in data) || isValidString(data.terms, 0, 120))
+        && (!('status' in data) || data.status in ['active', 'inactive', 'archived'])
+        && (!('email' in data) || isValidString(data.email, 0, 254))
+        && (!('address' in data) || isValidString(data.address, 0, 250))
+        && (!('taxNumber' in data) || isValidString(data.taxNumber, 0, 64))
+        && (!('notes' in data) || isValidString(data.notes, 0, 500))
+        && (!('legacyBalance' in data) || data.legacyBalance is number)
+        && (!('openingBalanceReviewed' in data) || data.openingBalanceReviewed is bool)
+        && (!('archived' in data) || data.archived is bool)
+        && (!('archivedAt' in data) || data.archivedAt == null || data.archivedAt is timestamp)
+        && (!('archivedByUid' in data) || data.archivedByUid == null || isValidId(data.archivedByUid))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCategoryDoc(data, branchId, categoryKey) {
+      return data.keys().hasAll(['branchId', 'name', 'normalizedName', 'createdByUid', 'createdAt'])
+        && data.keys().hasOnly(['branchId', 'name', 'normalizedName', 'createdByUid', 'createdAt'])
+        && data.branchId == branchId
+        && isValidId(data.branchId)
+        && isValidCategoryName(data.name)
+        && isNonDefaultCategory(data.name)
+        && isValidCategoryName(data.normalizedName)
+        && isNonDefaultCategory(data.normalizedName)
+        && data.normalizedName == data.name.lower()
+        && categoryKey == data.normalizedName
+        && isValidId(data.createdByUid)
+        && data.createdAt is timestamp;
+    }
+
+    function isValidCategoryMetadata(data, branchId, metaId) {
+      return metaId == 'custom_categories'
+        && data.keys().hasAll(['id', 'branchId', 'custom_categories', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'branchId', 'custom_categories', 'updatedByUid', 'createdAt', 'updatedAt'])
+        && data.id == 'custom_categories'
+        && data.branchId == branchId
+        && isValidId(data.branchId)
+        && data.custom_categories is list
+        && data.custom_categories.size() <= 12
+        && areAllValidUniqueLowerCategories12(data.custom_categories)
+        && (!('updatedByUid' in data) || isValidId(data.updatedByUid))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPurchaseInvoice(data, branchId, invoiceId) {
+      return data.keys().hasAll([
+          'id', 'branchId', 'supplierId', 'invoiceNumber',
+          'totalAmount', 'discount', 'netAmount', 'paidAmount', 'remainingAmount', 'paymentStatus',
+          'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'branchId', 'supplierId', 'supplierName', 'invoiceNumber', 'date', 'invoiceDate',
+          'items', 'itemsCount', 'totalAmount', 'subtotal', 'discount', 'netAmount', 'paidAmount',
+          'remainingAmount', 'paymentType', 'paymentStatus', 'dueDate', 'notes',
+          'deviceId', 'employeeName', 'createdAt', 'updatedAt'
+        ])
+        && data.id == invoiceId
+        && data.branchId == branchId
+        && isValidId(data.id)
+        && isValidId(data.branchId)
+        && isValidId(data.supplierId)
+        && (!('supplierName' in data) || isValidString(data.supplierName, 0, 160))
+        && isValidString(data.invoiceNumber, 1, 64)
+        && (!('date' in data) || isValidString(data.date, 0, 32))
+        && (!('invoiceDate' in data) || isValidString(data.invoiceDate, 0, 32))
+        && (!('items' in data) || (data.items is list && data.items.size() <= 100))
+        && (!('itemsCount' in data) || (data.itemsCount is number && data.itemsCount >= 0))
+        && (!('items' in data) || !('itemsCount' in data) || data.itemsCount == data.items.size())
+        && data.totalAmount is number && data.totalAmount >= 0
+        && (!('subtotal' in data) || (
+          data.subtotal is number
+          && data.subtotal >= 0
+          && data.subtotal >= data.totalAmount - 0.02
+          && data.subtotal <= data.totalAmount + 0.02
+        ))
+        && data.discount is number && data.discount >= 0 && data.discount <= data.totalAmount
+        && data.netAmount is number && data.netAmount >= 0
+        && data.netAmount >= (data.totalAmount - data.discount) - 0.02
+        && data.netAmount <= (data.totalAmount - data.discount) + 0.02
+        && data.paidAmount is number && data.paidAmount >= 0
+        && data.remainingAmount is number && data.remainingAmount >= 0
+        && (data.paidAmount + data.remainingAmount) >= data.netAmount - 0.02
+        && (data.paidAmount + data.remainingAmount) <= data.netAmount + 0.02
+        && (!('paymentType' in data) || data.paymentType in ['Cash', 'Credit', 'Bankak', 'Partial'])
+        && data.paymentStatus in ['Paid', 'Partial', 'Unpaid']
+        && (data.paymentStatus != 'Paid' || (data.remainingAmount <= 0.01 && data.paidAmount >= data.netAmount - 0.01))
+        && (data.paymentStatus != 'Partial' || (data.paidAmount > 0 && data.remainingAmount > 0.01))
+        && (data.paymentStatus != 'Unpaid' || (data.paidAmount <= 0.01 && data.remainingAmount >= data.netAmount - 0.01))
+        && (!('dueDate' in data) || isValidString(data.dueDate, 0, 32))
+        && (!('notes' in data) || isValidString(data.notes, 0, 500))
+        && (!('deviceId' in data) || isValidString(data.deviceId, 0, 128))
+        && (!('employeeName' in data) || isValidString(data.employeeName, 0, 120))
+        && data.createdAt is timestamp
+        && (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidSupplierTransaction(data, branchId, txId) {
+      return data.keys().hasAll(['id', 'branchId', 'supplierId', 'type', 'amount', 'effect', 'debit', 'credit', 'balanceAfter', 'createdAt'])
+        && data.keys().hasOnly([
+          'id', 'branchId', 'supplierId', 'type', 'referenceId', 'invoiceNumber',
+          'voucherNumber', 'amount', 'effect', 'debit', 'credit', 'balanceAfter', 'paymentMethod',
+          'bankakTransactionId', 'checkNumber', 'checkDueDate', 'transferReference', 'invoiceAllocations',
+          'date', 'timestamp', 'notes', 'employeeName',
+          'deviceId', 'isReversal', 'reversedTxId', 'createdAt'
+        ])
+        && data.id == txId
+        && data.branchId == branchId
+        && isValidId(data.id)
+        && isValidId(data.branchId)
+        && isValidId(data.supplierId)
+        && data.type in ['PURCHASE_INVOICE', 'PAYMENT', 'RETURN', 'OPENING_BALANCE', 'ADJUSTMENT']
+        && data.amount is number
+        && data.amount > 0
+        && data.effect in ['CREDIT', 'DEBIT']
+        && data.debit is number && data.debit >= 0
+        && data.credit is number && data.credit >= 0
+        && (data.effect != 'CREDIT' || (data.debit == 0 && data.credit >= data.amount - 0.01 && data.credit <= data.amount + 0.01))
+        && (data.effect != 'DEBIT' || (data.credit == 0 && data.debit >= data.amount - 0.01 && data.debit <= data.amount + 0.01))
+        && (!(data.type in ['PURCHASE_INVOICE', 'OPENING_BALANCE']) || data.effect == 'CREDIT')
+        && (!(data.type in ['PAYMENT', 'RETURN']) || data.effect == 'DEBIT')
+        && data.balanceAfter is number
+        && (!('paymentMethod' in data) || data.paymentMethod in ['Cash', 'Bankak', 'Check', 'Transfer'])
+        && (!('referenceId' in data) || isValidString(data.referenceId, 0, 128))
+        && (!('invoiceNumber' in data) || isValidString(data.invoiceNumber, 0, 64))
+        && (!('voucherNumber' in data) || isValidString(data.voucherNumber, 0, 64))
+        && (!('bankakTransactionId' in data) || isValidString(data.bankakTransactionId, 0, 128))
+        && (!('checkNumber' in data) || isValidString(data.checkNumber, 0, 64))
+        && (!('checkDueDate' in data) || isValidString(data.checkDueDate, 0, 32))
+        && (!('transferReference' in data) || isValidString(data.transferReference, 0, 128))
+        && (!('invoiceAllocations' in data) || (
+          data.type == 'PAYMENT'
+            ? isValidInvoiceAllocations12(data.invoiceAllocations, data.amount)
+            : (data.invoiceAllocations is list && data.invoiceAllocations.size() == 0)
+        ))
+        && (!('date' in data) || isValidString(data.date, 0, 32))
+        && (!('timestamp' in data) || isValidString(data.timestamp, 0, 64))
+        && (!('notes' in data) || isValidString(data.notes, 0, 500))
+        && (!('employeeName' in data) || isValidString(data.employeeName, 0, 120))
+        && (!('deviceId' in data) || isValidString(data.deviceId, 0, 128))
+        && (!('isReversal' in data) || data.isReversal is bool)
+        && (!('reversedTxId' in data) || isValidString(data.reversedTxId, 0, 128))
+        && data.createdAt is timestamp;
+    }
+
+    function isValidSupplierReversalLink(data, branchId) {
+      let isRev = data.get('isReversal', false);
+      return isRev == false
+        ? (!('reversedTxId' in data) || data.reversedTxId == null || data.reversedTxId == '')
+        : (
+          data.type == 'ADJUSTMENT'
+          && data.effect == 'CREDIT'
+          && 'reversedTxId' in data
+          && isValidId(data.reversedTxId)
+          && data.reversedTxId != data.id
+          && data.id == ('rev-' + hashing.sha256('khalid-pharmacy:supplier_payment_reversal:v1:' + data.reversedTxId).toHexString().lower()[0:32])
+          && 'referenceId' in data
+          && data.referenceId == data.reversedTxId
+          && isValidSupplierReversalTarget(branchId, data)
+        );
+    }
+
+    function isValidSupplierReversalTarget(branchId, data) {
+      let origPath = /databases/$(database)/documents/branches/$(branchId)/supplier_transactions/$(data.reversedTxId);
+      let origExists = exists(origPath);
+      let orig = origExists ? get(origPath).data : null;
+      return origExists
+        && orig.branchId == branchId
+        && orig.supplierId == data.supplierId
+        && orig.type == 'PAYMENT'
+        && orig.get('isReversal', false) == false
+        && orig.amount >= data.amount - 0.01
+        && orig.amount <= data.amount + 0.01;
+    }
+
+    function isValidReceipt(data, branchId, receiptId) {
+      return data.keys().hasAll(['id', 'branchId', 'status', 'createdByUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'id', 'branchId', 'transactionId', 'amount', 'status', 'notes',
+          'imageFileName', 'createdByUid', 'timestamp',
+          'archived', 'archivedAt', 'archivedByUid',
+          'createdAt', 'updatedAt'
+        ])
+        && data.id == receiptId
+        && data.branchId == branchId
+        && isValidId(data.id)
+        && isValidId(data.branchId)
+        && data.status in ['pending', 'verified', 'rejected', 'matched', 'archived', 'needs_review']
+        && (!('amount' in data) || data.amount == null || (data.amount is number && data.amount >= 0))
+        && isValidId(data.createdByUid)
+        && (!('transactionId' in data) || isValidString(data.transactionId, 0, 128))
+        && (!('notes' in data) || isValidString(data.notes, 0, 500))
+        && (!('imageFileName' in data) || isValidString(data.imageFileName, 0, 200))
+        && (!('timestamp' in data) || isValidString(data.timestamp, 0, 64))
+        && (!('archived' in data) || data.archived is bool)
+        && (!('archivedAt' in data) || data.archivedAt == null || data.archivedAt is timestamp)
+        && (!('archivedByUid' in data) || data.archivedByUid == null || isValidId(data.archivedByUid))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidOcrDraft(data, branchId, draftId) {
+      return data.keys().hasAll(['id', 'branchId', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'branchId', 'supplierId', 'extractedSupplierName', 'invoiceNumber', 'status', 'itemsCount', 'totalAmount', 'createdAt', 'updatedAt'])
+        && data.id == draftId
+        && data.branchId == branchId
+        && isValidId(data.id)
+        && isValidId(data.branchId)
+        && (!('supplierId' in data) || data.supplierId == null || isValidString(data.supplierId, 0, 128))
+        && (!('extractedSupplierName' in data) || isValidString(data.extractedSupplierName, 0, 160))
+        && (!('invoiceNumber' in data) || isValidString(data.invoiceNumber, 0, 64))
+        && isValidString(data.status, 1, 40)
+        && (!('itemsCount' in data) || (data.itemsCount is number && data.itemsCount >= 0))
+        && (!('totalAmount' in data) || (data.totalAmount is number && data.totalAmount >= 0))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidStocktakingSession(data, branchId, sessionId) {
+      return data.keys().hasAll(['id', 'branchId', 'status', 'accountingStatus', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'id', 'branchId', 'sessionNumber', 'status', 'accountingStatus', 'syncStatus',
+          'startedAt', 'startedBy', 'startedByUid',
+          'committedAt', 'committedBy', 'committedByUid',
+          'auditReason', 'notes', 'deviceId',
+          'itemsCount', 'totalItemsCount', 'matchedItemsCount', 'surplusItemsCount', 'deficitItemsCount',
+          'totalScanned', 'itemsWithVariance', 'netVarianceSDG', 'totalVarianceCost',
+          'adjustmentLedgerIds', 'createdAt', 'updatedAt'
+        ])
+        && data.id == sessionId
+        && data.branchId == branchId
+        && isValidId(data.id)
+        && isValidId(data.branchId)
+        && isValidStocktakingStatus(data.status)
+        && !(data.status in ['committed', 'COMMITTED'])
+        && isValidClientAccountingStatus(data.accountingStatus)
+        && (!('syncStatus' in data) || isValidString(data.syncStatus, 1, 64))
+        && (!('sessionNumber' in data) || isValidString(data.sessionNumber, 1, 64))
+        && (!('startedAt' in data) || isValidString(data.startedAt, 0, 64))
+        && (!('startedBy' in data) || isValidString(data.startedBy, 0, 128))
+        && (!('startedByUid' in data) || isValidId(data.startedByUid))
+        && (!('committedAt' in data) || data.committedAt is timestamp)
+        && (!('committedBy' in data) || isValidString(data.committedBy, 0, 128))
+        && (!('committedByUid' in data) || isValidId(data.committedByUid))
+        && (!('auditReason' in data) || isValidString(data.auditReason, 0, 500))
+        && (!('notes' in data) || isValidString(data.notes, 0, 500))
+        && (!('deviceId' in data) || isValidString(data.deviceId, 0, 128))
+        && (!('itemsCount' in data) || (data.itemsCount is number && data.itemsCount >= 0))
+        && (!('totalItemsCount' in data) || (data.totalItemsCount is number && data.totalItemsCount >= 0))
+        && (!('matchedItemsCount' in data) || (data.matchedItemsCount is number && data.matchedItemsCount >= 0))
+        && (!('surplusItemsCount' in data) || (data.surplusItemsCount is number && data.surplusItemsCount >= 0))
+        && (!('deficitItemsCount' in data) || (data.deficitItemsCount is number && data.deficitItemsCount >= 0))
+        && (!('totalScanned' in data) || (data.totalScanned is number && data.totalScanned >= 0))
+        && (!('itemsWithVariance' in data) || (data.itemsWithVariance is number && data.itemsWithVariance >= 0))
+        && (!('netVarianceSDG' in data) || data.netVarianceSDG is number)
+        && (!('totalVarianceCost' in data) || data.totalVarianceCost is number)
+        && (!('matchedItemsCount' in data) || !('surplusItemsCount' in data) || !('deficitItemsCount' in data) || !('totalItemsCount' in data)
+          || (data.matchedItemsCount + data.surplusItemsCount + data.deficitItemsCount == data.totalItemsCount))
+        && (!('itemsWithVariance' in data) || !('surplusItemsCount' in data) || !('deficitItemsCount' in data)
+          || (data.itemsWithVariance == data.surplusItemsCount + data.deficitItemsCount))
+        && (!('itemsCount' in data) || !('totalItemsCount' in data) || data.itemsCount == data.totalItemsCount)
+        && (!('adjustmentLedgerIds' in data) || (data.adjustmentLedgerIds is list && data.adjustmentLedgerIds.size() <= 500))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function hasValidStocktakingCompletionSummaries(data) {
+      return 'totalItemsCount' in data
+        && 'matchedItemsCount' in data
+        && 'surplusItemsCount' in data
+        && 'deficitItemsCount' in data
+        && 'itemsWithVariance' in data
+        && 'totalScanned' in data
+        && 'netVarianceSDG' in data;
+    }
+
+    function isValidFirstAdjustmentLedgerDoc(branchId, data, ledgerId) {
+      let firstPath = /databases/$(database)/documents/branches/$(branchId)/inventory_ledger/$(ledgerId);
+      let firstExists = exists(firstPath);
+      let firstDoc = firstExists ? get(firstPath).data : null;
+      return firstExists
+        && firstDoc.branchId == branchId
+        && firstDoc.type == 'ADJUSTMENT'
+        && (!('sessionNumber' in data) || !('referenceId' in firstDoc) || firstDoc.referenceId == data.sessionNumber);
+    }
+
+    // Bounded partial verification within Firestore Rules 10-call limit & no loops:
+    // Verifies size >= itemsWithVariance, distinct boundary IDs, type/branch on ids[0],
+    // and existence of boundary sample docs (ids[0], ids[1], ids[last]).
+    // Remaining indices & full arithmetic sum remain unverified server-side without Cloud Functions,
+    // which is why state stays 'sync_completed_unverified' / 'unverified_client_sync'.
+    function areStocktakingCompletionLedgersVerified(branchId, data) {
+      return data.itemsWithVariance == 0
+        ? (!('adjustmentLedgerIds' in data) || (data.adjustmentLedgerIds is list && data.adjustmentLedgerIds.size() == 0))
+        : (
+          'adjustmentLedgerIds' in data
+          && data.adjustmentLedgerIds is list
+          && data.adjustmentLedgerIds.size() >= 1
+          && data.adjustmentLedgerIds.size() >= data.itemsWithVariance
+          && data.adjustmentLedgerIds.size() <= 500
+          && isValidId(data.adjustmentLedgerIds[0])
+          && isValidId(data.adjustmentLedgerIds[data.adjustmentLedgerIds.size() - 1])
+          && (data.adjustmentLedgerIds.size() <= 1 || (
+            isValidId(data.adjustmentLedgerIds[1])
+            && data.adjustmentLedgerIds[1] != data.adjustmentLedgerIds[0]
+          ))
+          && (data.adjustmentLedgerIds.size() <= 2 || (
+            data.adjustmentLedgerIds[data.adjustmentLedgerIds.size() - 1] != data.adjustmentLedgerIds[0]
+            && data.adjustmentLedgerIds[data.adjustmentLedgerIds.size() - 1] != data.adjustmentLedgerIds[1]
+          ))
+          && isValidFirstAdjustmentLedgerDoc(branchId, data, data.adjustmentLedgerIds[0])
+          && (data.adjustmentLedgerIds.size() <= 1
+            || exists(/databases/$(database)/documents/branches/$(branchId)/inventory_ledger/$(data.adjustmentLedgerIds[1])))
+          && (data.adjustmentLedgerIds.size() <= 2
+            || exists(/databases/$(database)/documents/branches/$(branchId)/inventory_ledger/$(data.adjustmentLedgerIds[data.adjustmentLedgerIds.size() - 1])))
+        );
+    }
+
+    function canTransitionStocktakingSession(branchId, prev, next) {
+      let prevOpen = prev.status in ['active', 'in_progress', 'reviewing', 'IN_PROGRESS'];
+      let prevSyncing = prev.status == 'syncing_adjustments';
+      return (
+        (
+          prevOpen
+          && next.status in ['active', 'in_progress', 'reviewing', 'syncing_adjustments']
+          && next.accountingStatus == 'open'
+          && !('committedAt' in next)
+        )
+        || (
+          prevOpen
+          && next.status == 'cancelled'
+          && next.accountingStatus == 'cancelled'
+          && (!('adjustmentLedgerIds' in next) || next.adjustmentLedgerIds.size() == 0)
+          && !('committedAt' in next)
+        )
+        || (
+          prevSyncing
+          && next.status == 'syncing_adjustments'
+          && next.accountingStatus == 'open'
+          && !('committedAt' in next)
+        )
+        || (
+          prevSyncing
+          && next.status == 'sync_completed_unverified'
+          && next.accountingStatus == 'unverified_client_sync'
+          && 'committedAt' in next
+          && next.committedAt is timestamp
+          && 'committedByUid' in next
+          && next.committedByUid == request.auth.uid
+          && hasValidStocktakingCompletionSummaries(next)
+          && areStocktakingCompletionLedgersVerified(branchId, next)
+        )
+      );
+    }
+
+    function isValidStocktakingItem(data, branchId, sessionId, itemId) {
+      return data.keys().hasAll([
+          'id', 'branchId', 'sessionId', 'medicineId', 'medicineName',
+          'systemStock', 'actualCount', 'variance', 'varianceSDG', 'buyPrice',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'branchId', 'sessionId', 'medicineId', 'medicineName',
+          'barcode', 'secondaryBarcodes', 'batchNumber', 'expiry',
+          'systemStock', 'actualCount', 'variance', 'variancePacks', 'unit',
+          'buyPrice', 'sellPrice', 'varianceSDG', 'varianceCost',
+          'lastScannedAt', 'updatedByUid', 'createdAt', 'updatedAt'
+        ])
+        && data.id == itemId
+        && data.branchId == branchId
+        && data.sessionId == sessionId
+        && isValidId(data.id)
+        && isValidId(data.branchId)
+        && isValidId(data.sessionId)
+        && isValidId(data.medicineId)
+        && isValidString(data.medicineName, 1, 200)
+        && (!('barcode' in data) || isValidString(data.barcode, 0, 64))
+        && (!('secondaryBarcodes' in data) || isValidSecondaryBarcodes(data.secondaryBarcodes))
+        && (!('batchNumber' in data) || isValidString(data.batchNumber, 0, 64))
+        && (!('expiry' in data) || isValidString(data.expiry, 0, 32))
+        && (!('unit' in data) || data.unit in ['pack', 'strip', 'pill'])
+        && data.systemStock is number && data.systemStock >= 0
+        && data.actualCount is number && data.actualCount >= 0
+        && data.buyPrice is number && data.buyPrice >= 0
+        && (!('sellPrice' in data) || (data.sellPrice is number && data.sellPrice >= 0))
+        && data.variance is number
+        && data.variance >= (data.actualCount - data.systemStock) - 0.01
+        && data.variance <= (data.actualCount - data.systemStock) + 0.01
+        && (!('variancePacks' in data) || (
+          data.variancePacks is number
+          && data.variancePacks >= data.variance - 0.01
+          && data.variancePacks <= data.variance + 0.01
+        ))
+        && data.varianceSDG is number
+        && data.varianceSDG >= (data.variance * data.buyPrice) - 0.02
+        && data.varianceSDG <= (data.variance * data.buyPrice) + 0.02
+        && (!('varianceCost' in data) || (
+          data.varianceCost is number
+          && data.varianceCost >= data.varianceSDG - 0.02
+          && data.varianceCost <= data.varianceSDG + 0.02
+        ))
+        && (!('lastScannedAt' in data) || isValidString(data.lastScannedAt, 0, 64))
+        && (!('updatedByUid' in data) || isValidId(data.updatedByUid))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAuditLog(data, branchId, eventId) {
+      return data.keys().hasAll(['id', 'branchId', 'actorUid', 'actorRole', 'action', 'createdAt'])
+        && data.keys().hasOnly(['id', 'branchId', 'actorUid', 'actorEmail', 'actorRole', 'action', 'targetId', 'details', 'createdAt'])
+        && data.id == eventId
+        && data.branchId == branchId
+        && isValidId(data.id)
+        && isValidId(data.branchId)
+        && isValidId(data.actorUid)
+        && data.actorRole in ['super_admin', 'admin', 'cashier']
+        && isValidString(data.action, 1, 120)
+        && (!('actorEmail' in data) || isValidString(data.actorEmail, 0, 254))
+        && (!('targetId' in data) || isValidString(data.targetId, 0, 128))
+        && (!('details' in data) || isValidString(data.details, 0, 500))
+        && data.createdAt is timestamp;
+    }
+
+    function canCreateOwnProfileFromInvite(uid, data) {
+      return isValidId(data.inviteId)
+        && exists(/databases/$(database)/documents/staff_invites/$(data.inviteId))
+        && get(/databases/$(database)/documents/staff_invites/$(data.inviteId)).data.active == true
+        && get(/databases/$(database)/documents/staff_invites/$(data.inviteId)).data.email == request.auth.token.email.lower()
+        && (!('claimedUid' in get(/databases/$(database)/documents/staff_invites/$(data.inviteId)).data)
+          || get(/databases/$(database)/documents/staff_invites/$(data.inviteId)).data.claimedUid == null)
+        && existsAfter(/databases/$(database)/documents/staff_invites/$(data.inviteId))
+        && getAfter(/databases/$(database)/documents/staff_invites/$(data.inviteId)).data.claimedUid == request.auth.uid
+        && data.email == request.auth.token.email.lower()
+        && data.role == get(/databases/$(database)/documents/staff_invites/$(data.inviteId)).data.role
+        && data.branchIds == get(/databases/$(database)/documents/staff_invites/$(data.inviteId)).data.branchIds
+        && data.active == true;
+    }
+
+    // -------------------------------------------------------------------------
+    // Users Collection (PII & Role Integrity)
+    // -------------------------------------------------------------------------
+    match /users/{uid} {
+      allow get: if isVerifiedUser() && isValidId(uid) && (
+        request.auth.uid == uid
+        || isSuperAdmin()
+        || (
+          resource != null
+          && resource.data != null
+          && 'branchIds' in resource.data
+          && isAdminForAnyBranch(resource.data.branchIds)
+        )
+      );
+
+      allow list: if isVerifiedUser() && (
+        (resource != null && resource.data != null && 'uid' in resource.data && resource.data.uid == request.auth.uid)
+        || isSuperAdmin()
+        || (resource != null && resource.data != null && 'branchIds' in resource.data && isAdminForAnyBranch(resource.data.branchIds))
+      );
+
+      allow create: if isVerifiedUser()
+        && isValidId(uid)
+        && isValidUserProfile(incoming(), uid)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          (request.auth.uid != uid && userProfileExists() && isSuperAdmin())
+          || (
+            request.auth.uid == uid
+            && (
+              (isBootstrappedSuperAdmin() && !userProfileExists() && incoming().email == request.auth.token.email.lower() && incoming().role == 'super_admin' && incoming().active == true && !('inviteId' in incoming()))
+              || canCreateOwnProfileFromInvite(uid, incoming())
+            )
+          )
+        );
+
+      allow update: if isVerifiedUser()
+        && isValidId(uid)
+        && isValidUserProfile(incoming(), uid)
+        && incoming().uid == existing().uid
+        && incoming().email == existing().email
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          (
+            isSuperAdmin()
+            && (request.auth.uid != uid || incoming().active == true)
+            && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'role', 'branchIds', 'activeBranchId', 'active', 'updatedAt'])
+          )
+          || (
+            request.auth.uid == uid
+            && incoming().diff(existing()).affectedKeys().hasOnly(['activeBranchId', 'displayName', 'updatedAt'])
+            && incoming().role == existing().role
+            && incoming().branchIds == existing().branchIds
+            && incoming().active == existing().active
+            && (
+              !('activeBranchId' in incoming())
+              || incoming().activeBranchId == null
+              || incoming().activeBranchId in existing().branchIds
+            )
+          )
+          || (
+            existing().role == 'cashier'
+            && isAdminForCashierBranch(existing().branchIds)
+            && incoming().role == existing().role
+            && incoming().branchIds == existing().branchIds
+            && incoming().diff(existing()).affectedKeys().hasOnly(['active', 'displayName', 'updatedAt'])
+          )
+        );
+
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Pre-Authorized Staff Invitations
+    // -------------------------------------------------------------------------
+    match /staff_invites/{inviteId} {
+      allow get: if isVerifiedUser() && isValidId(inviteId) && (
+        isSuperAdmin()
+        || (
+          resource != null && (
+            resource.data.email == request.auth.token.email.lower()
+            || isAdminForAnyBranch(resource.data.branchIds)
+          )
+        )
+      );
+
+      allow list: if isVerifiedUser() && (
+        isSuperAdmin()
+        || resource.data.email == request.auth.token.email.lower()
+        || isAdminForAnyBranch(resource.data.branchIds)
+      );
+
+      allow create: if isVerifiedUser()
+        && isValidId(inviteId)
+        && isValidStaffInvite(incoming(), inviteId)
+        && (!('claimedUid' in incoming()) || incoming().claimedUid == null)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          isSuperAdmin()
+          || (
+            incoming().role == 'cashier'
+            && incoming().branchIds.size() == 1
+            && isBranchAdmin(incoming().branchIds[0])
+            && branchIsActive(incoming().branchIds[0])
+            && incoming().invitedByUid == request.auth.uid
+          )
+        );
+
+      allow update: if isVerifiedUser()
+        && isValidId(inviteId)
+        && isValidStaffInvite(incoming(), inviteId)
+        && incoming().id == existing().id
+        && incoming().email == existing().email
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          (
+            isSuperAdmin()
+            && (!('claimedUid' in existing()) || existing().claimedUid == null || incoming().claimedUid == existing().claimedUid)
+            && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'role', 'branchIds', 'active', 'updatedAt'])
+          )
+          || (
+            existing().role == 'cashier'
+            && incoming().role == 'cashier'
+            && existing().branchIds.size() == 1
+            && isBranchAdmin(existing().branchIds[0])
+            && branchIsActive(existing().branchIds[0])
+            && incoming().branchIds == existing().branchIds
+            && incoming().diff(existing()).affectedKeys().hasOnly(['active', 'displayName', 'updatedAt'])
+          )
+          || (
+            existing().active == true
+            && existing().email == request.auth.token.email.lower()
+            && (!('claimedUid' in existing()) || existing().claimedUid == null)
+            && incoming().claimedUid == request.auth.uid
+            && incoming().diff(existing()).affectedKeys().hasOnly(['claimedUid', 'updatedAt'])
+          )
+        );
+
+      allow delete: if isSuperAdmin()
+        && isValidId(inviteId)
+        && (!('claimedUid' in existing()) || existing().claimedUid == null);
+    }
+
+    // -------------------------------------------------------------------------
+    // Branches & Branch-Isolated Operational Collections
+    // -------------------------------------------------------------------------
+    match /branches/{branchId} {
+      allow get: if isValidId(branchId) && (
+        isSuperAdmin()
+        || (hasBranch(branchId) && resource != null && resource.data.active == true)
+      );
+
+      allow list: if isVerifiedUser() && (
+        isSuperAdmin()
+        || (
+          resource.data.active == true
+          && (
+            request.auth.uid in resource.data.memberUids
+            || request.auth.uid in resource.data.adminUids
+          )
+        )
+      );
+
+      allow create: if isVerifiedUser()
+        && isValidId(branchId)
+        && isValidBranch(incoming(), branchId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && isSuperAdmin();
+
+      allow update: if isVerifiedUser()
+        && isValidId(branchId)
+        && isValidBranch(incoming(), branchId)
+        && incoming().id == existing().id
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['code', 'nameAr', 'nameEn', 'city', 'phone', 'active', 'adminUids', 'memberUids', 'updatedAt'])
+        && isSuperAdmin();
+
+      allow delete: if false;
+
+      match /medicines/{medicineId} {
+        allow get: if isValidId(branchId) && isValidId(medicineId) && branchIsActive(branchId) && isAssignedUser(branchId);
+        allow list: if isValidId(branchId) && branchIsActive(branchId) && isAssignedUser(branchId) && resource.data.branchId == branchId;
+
+        allow create: if canCreateMedicine(branchId, medicineId);
+
+        allow update: if canUpdateMedicine(branchId, medicineId);
+
+        allow delete: if false;
+      }
+
+      match /inventory_ledger/{movementId} {
+        allow get: if isValidId(branchId) && isValidId(movementId) && branchIsActive(branchId) && isAssignedUser(branchId);
+        allow list: if isValidId(branchId) && branchIsActive(branchId) && isAssignedUser(branchId) && resource.data.branchId == branchId;
+
+        allow create: if canCreateInventoryLedger(branchId, movementId);
+
+        allow update, delete: if false;
+      }
+
+      match /sales/{saleId} {
+        allow get: if isValidId(branchId) && isValidId(saleId) && branchIsActive(branchId) && isAssignedUser(branchId);
+        allow list: if isValidId(branchId) && branchIsActive(branchId) && isAssignedUser(branchId) && resource.data.branchId == branchId;
+
+        allow create: if canCreateSale(branchId, saleId);
+
+        allow update: if isValidId(branchId)
+          && isValidId(saleId)
+          && (
+            canFinalizePendingSale(branchId, saleId, incoming(), existing())
+            || canAdminUpdateSaleMetadata(branchId, saleId, incoming(), existing())
+          );
+
+        allow delete: if false;
+      }
+
+      match /suppliers/{supplierId} {
+        allow get: if isValidId(branchId) && isValidId(supplierId) && branchIsActive(branchId) && isBranchAdmin(branchId);
+        allow list: if isValidId(branchId) && branchIsActive(branchId) && isBranchAdmin(branchId) && resource.data.branchId == branchId;
+
+        allow create: if isVerifiedUser()
+          && isValidId(branchId)
+          && isValidId(supplierId)
+          && isValidSupplier(incoming(), branchId, supplierId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && isBranchAdmin(branchId)
+          && branchIsActive(branchId);
+
+        allow update: if isVerifiedUser()
+          && isValidId(branchId)
+          && isValidId(supplierId)
+          && isValidSupplier(incoming(), branchId, supplierId)
+          && incoming().id == existing().id
+          && incoming().branchId == existing().branchId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'nameAr', 'nameEn', 'contactPerson', 'phone', 'city',
+            'balance', 'terms', 'status', 'email', 'address', 'taxNumber',
+            'notes', 'legacyBalance', 'openingBalanceReviewed',
+            'archived', 'archivedAt', 'archivedByUid', 'updatedAt'
+          ])
+          && isBranchAdmin(branchId)
+          && branchIsActive(branchId);
+
+        allow delete: if false;
+      }
+
+      match /categories/{categoryKey} {
+        allow get: if isValidId(branchId) && isValidCategoryName(categoryKey) && branchIsActive(branchId) && isAssignedUser(branchId);
+        allow list: if isValidId(branchId) && branchIsActive(branchId) && isAssignedUser(branchId) && resource.data.branchId == branchId;
+
+        allow create: if isVerifiedUser()
+          && isValidId(branchId)
+          && isValidCategoryName(categoryKey)
+          && isValidCategoryDoc(incoming(), branchId, categoryKey)
+          && incoming().createdByUid == request.auth.uid
+          && incoming().createdAt == request.time
+          && isBranchAdmin(branchId)
+          && branchIsActive(branchId);
+
+        allow update, delete: if false;
+      }
+
+      match /metadata/{metaId} {
+        allow get: if isValidId(branchId) && metaId == 'custom_categories' && branchIsActive(branchId) && isAssignedUser(branchId);
+        allow list: if isValidId(branchId) && branchIsActive(branchId) && isAssignedUser(branchId) && resource.data.branchId == branchId && resource.data.id == 'custom_categories';
+
+        allow create: if isVerifiedUser()
+          && isValidId(branchId)
+          && metaId == 'custom_categories'
+          && isValidCategoryMetadata(incoming(), branchId, metaId)
+          && (!('updatedByUid' in incoming()) || incoming().updatedByUid == request.auth.uid)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && isBranchAdmin(branchId)
+          && branchIsActive(branchId);
+
+        allow update: if isVerifiedUser()
+          && isValidId(branchId)
+          && metaId == 'custom_categories'
+          && isValidCategoryMetadata(incoming(), branchId, metaId)
+          && incoming().id == existing().id
+          && incoming().branchId == existing().branchId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (!('updatedByUid' in incoming()) || incoming().updatedByUid == request.auth.uid)
+          && incoming().diff(existing()).affectedKeys().hasOnly(['custom_categories', 'updatedByUid', 'updatedAt'])
+          && isBranchAdmin(branchId)
+          && branchIsActive(branchId);
+
+        allow delete: if false;
+      }
+
+      match /purchase_invoices/{invoiceId} {
+        allow get: if isValidId(branchId) && isValidId(invoiceId) && branchIsActive(branchId) && isBranchAdmin(branchId);
+        allow list: if isValidId(branchId) && branchIsActive(branchId) && isBranchAdmin(branchId) && resource.data.branchId == branchId;
+
+        allow create: if isVerifiedUser()
+          && isValidId(branchId)
+          && isValidId(invoiceId)
+          && isValidPurchaseInvoice(incoming(), branchId, invoiceId)
+          && incoming().createdAt == request.time
+          && isBranchAdmin(branchId)
+          && branchIsActive(branchId)
+          && exists(/databases/$(database)/documents/branches/$(branchId)/suppliers/$(incoming().supplierId));
+
+        allow update: if isVerifiedUser()
+          && isValidId(branchId)
+          && isValidId(invoiceId)
+          && isValidPurchaseInvoice(incoming(), branchId, invoiceId)
+          && incoming().id == existing().id
+          && incoming().branchId == existing().branchId
+          && incoming().supplierId == existing().supplierId
+          && incoming().totalAmount == existing().totalAmount
+          && incoming().discount == existing().discount
+          && incoming().netAmount == existing().netAmount
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['paidAmount', 'remainingAmount', 'paymentStatus', 'notes', 'updatedAt'])
+          && isBranchAdmin(branchId)
+          && branchIsActive(branchId);
+
+        allow delete: if false;
+      }
+
+      match /supplier_transactions/{txId} {
+        allow get: if isValidId(branchId) && isValidId(txId) && branchIsActive(branchId) && isBranchAdmin(branchId);
+        allow list: if isValidId(branchId) && branchIsActive(branchId) && isBranchAdmin(branchId) && resource.data.branchId == branchId;
+
+        allow create: if isVerifiedUser()
+          && isValidId(branchId)
+          && isValidId(txId)
+          && isValidSupplierTransaction(incoming(), branchId, txId)
+          && isValidSupplierReversalLink(incoming(), branchId)
+          && incoming().createdAt == request.time
+          && isBranchAdmin(branchId)
+          && branchIsActive(branchId)
+          && exists(/databases/$(database)/documents/branches/$(branchId)/suppliers/$(incoming().supplierId));
+
+        allow update, delete: if false;
+      }
+
+      match /receipts/{receiptId} {
+        allow get: if isValidId(branchId) && isValidId(receiptId) && branchIsActive(branchId) && isAssignedUser(branchId);
+        allow list: if isValidId(branchId) && branchIsActive(branchId) && isAssignedUser(branchId) && resource.data.branchId == branchId;
+
+        allow create: if isVerifiedUser()
+          && isValidId(branchId)
+          && isValidId(receiptId)
+          && isValidReceipt(incoming(), branchId, receiptId)
+          && incoming().createdByUid == request.auth.uid
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && isAssignedUser(branchId)
+          && branchIsActive(branchId);
+
+        allow update: if isVerifiedUser()
+          && isValidId(branchId)
+          && isValidId(receiptId)
+          && isValidReceipt(incoming(), branchId, receiptId)
+          && incoming().id == existing().id
+          && incoming().branchId == existing().branchId
+          && incoming().createdByUid == existing().createdByUid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'transactionId', 'amount', 'status', 'notes', 'imageFileName',
+            'archived', 'archivedAt', 'archivedByUid', 'updatedAt'
+          ])
+          && isBranchAdmin(branchId)
+          && branchIsActive(branchId);
+
+        allow delete: if false;
+      }
+
+      match /supplier_invoice_drafts/{draftId} {
+        allow get: if isValidId(branchId) && isValidId(draftId) && branchIsActive(branchId) && isBranchAdmin(branchId);
+        allow list: if isValidId(branchId) && branchIsActive(branchId) && isBranchAdmin(branchId) && resource.data.branchId == branchId;
+
+        allow create: if isVerifiedUser()
+          && isValidId(branchId)
+          && isValidId(draftId)
+          && isValidOcrDraft(incoming(), branchId, draftId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && isBranchAdmin(branchId)
+          && branchIsActive(branchId);
+
+        allow update: if isVerifiedUser()
+          && isValidId(branchId)
+          && isValidId(draftId)
+          && isValidOcrDraft(incoming(), branchId, draftId)
+          && incoming().id == existing().id
+          && incoming().branchId == existing().branchId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['supplierId', 'extractedSupplierName', 'invoiceNumber', 'status', 'itemsCount', 'totalAmount', 'updatedAt'])
+          && isBranchAdmin(branchId)
+          && branchIsActive(branchId);
+
+        allow delete: if isValidId(branchId) && isValidId(draftId) && isBranchAdmin(branchId) && branchIsActive(branchId);
+      }
+
+      match /stocktaking_sessions/{sessionId} {
+        allow get: if isValidId(branchId) && isValidId(sessionId) && branchIsActive(branchId) && isBranchAdmin(branchId);
+        allow list: if isValidId(branchId) && branchIsActive(branchId) && isBranchAdmin(branchId) && resource.data.branchId == branchId;
+
+        allow create: if isVerifiedUser()
+          && isValidId(branchId)
+          && isValidId(sessionId)
+          && isValidStocktakingSession(incoming(), branchId, sessionId)
+          && incoming().status in ['active', 'in_progress', 'reviewing']
+          && incoming().accountingStatus == 'open'
+          && !('committedAt' in incoming())
+          && (!('adjustmentLedgerIds' in incoming()) || incoming().adjustmentLedgerIds.size() == 0)
+          && (!('startedByUid' in incoming()) || incoming().startedByUid == request.auth.uid)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && isBranchAdmin(branchId)
+          && branchIsActive(branchId);
+
+        allow update: if isVerifiedUser()
+          && isValidId(branchId)
+          && isValidId(sessionId)
+          && isValidStocktakingSession(incoming(), branchId, sessionId)
+          && incoming().id == existing().id
+          && incoming().branchId == existing().branchId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && !isTerminalStocktakingStatus(existing().status)
+          && existing().get('accountingStatus', 'open') == 'open'
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'sessionNumber', 'status', 'accountingStatus', 'syncStatus',
+            'startedBy', 'committedAt', 'committedBy', 'committedByUid',
+            'auditReason', 'notes', 'itemsCount', 'totalItemsCount',
+            'matchedItemsCount', 'surplusItemsCount', 'deficitItemsCount',
+            'totalScanned', 'itemsWithVariance', 'netVarianceSDG', 'totalVarianceCost',
+            'adjustmentLedgerIds', 'updatedAt'
+          ])
+          && canTransitionStocktakingSession(branchId, existing(), incoming())
+          && isBranchAdmin(branchId)
+          && branchIsActive(branchId);
+
+        allow delete: if false;
+
+        match /items/{itemId} {
+          allow get: if isValidId(branchId) && isValidId(sessionId) && isValidId(itemId) && branchIsActive(branchId) && isBranchAdmin(branchId);
+          allow list: if isValidId(branchId) && isValidId(sessionId) && branchIsActive(branchId) && isBranchAdmin(branchId) && resource.data.branchId == branchId && resource.data.sessionId == sessionId;
+
+          allow create: if isVerifiedUser()
+            && isValidId(branchId)
+            && isValidId(sessionId)
+            && isValidId(itemId)
+            && isValidStocktakingItem(incoming(), branchId, sessionId, itemId)
+            && (!('updatedByUid' in incoming()) || incoming().updatedByUid == request.auth.uid)
+            && incoming().createdAt == request.time
+            && incoming().updatedAt == request.time
+            && isBranchAdmin(branchId)
+            && branchIsActive(branchId)
+            && parentStocktakingItemsAreWritable(branchId, sessionId)
+            && exists(/databases/$(database)/documents/branches/$(branchId)/medicines/$(incoming().medicineId));
+
+          allow update: if isVerifiedUser()
+            && isValidId(branchId)
+            && isValidId(sessionId)
+            && isValidId(itemId)
+            && isValidStocktakingItem(incoming(), branchId, sessionId, itemId)
+            && incoming().id == existing().id
+            && incoming().branchId == existing().branchId
+            && incoming().sessionId == existing().sessionId
+            && incoming().medicineId == existing().medicineId
+            && incoming().createdAt == existing().createdAt
+            && incoming().updatedAt == request.time
+            && (!('updatedByUid' in incoming()) || incoming().updatedByUid == request.auth.uid)
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'medicineName', 'barcode', 'secondaryBarcodes', 'batchNumber', 'expiry',
+              'systemStock', 'actualCount', 'variance', 'variancePacks', 'unit',
+              'buyPrice', 'sellPrice', 'varianceSDG', 'varianceCost',
+              'lastScannedAt', 'updatedByUid', 'updatedAt'
+            ])
+            && isBranchAdmin(branchId)
+            && branchIsActive(branchId)
+            && parentStocktakingItemsAreWritable(branchId, sessionId);
+
+          allow delete: if isVerifiedUser()
+            && isValidId(branchId)
+            && isValidId(sessionId)
+            && isValidId(itemId)
+            && isBranchAdmin(branchId)
+            && branchIsActive(branchId)
+            && parentStocktakingItemsAreWritable(branchId, sessionId);
+        }
+      }
+
+      match /audit_logs/{eventId} {
+        allow get: if isValidId(branchId) && isValidId(eventId) && branchIsActive(branchId) && isBranchAdmin(branchId);
+        allow list: if isValidId(branchId) && branchIsActive(branchId) && isBranchAdmin(branchId) && resource.data.branchId == branchId;
+
+        allow create: if isVerifiedUser()
+          && isValidId(branchId)
+          && isValidId(eventId)
+          && isValidAuditLog(incoming(), branchId, eventId)
+          && incoming().actorUid == request.auth.uid
+          && incoming().createdAt == request.time
+          && isAssignedUser(branchId)
+          && branchIsActive(branchId);
+
+        allow update, delete: if false;
+      }
+
+      match /{document=**} {
+        allow read, write: if false;
+      }
+    }
+  }
+}
