@@ -1,0 +1,30 @@
+name: Node CI Lab Validation
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  node-validation:
+    name: Node 22 + dependency install + tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout CI lab
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install isolated lab dependency
+        run: npm install --ignore-scripts
+      - name: Verify dependency tree
+        run: npm ls --depth=0
+      - name: Run CI environment tests
+        run: npm test
