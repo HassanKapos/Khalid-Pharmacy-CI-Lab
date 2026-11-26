@@ -1,0 +1,27 @@
+name: CI Lab Smoke Test
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runner-smoke-test:
+    name: Verify GitHub-hosted runner
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Confirm runner started
+        run: |
+          echo "CI Lab runner started successfully."
+          echo "Repository: ${GITHUB_REPOSITORY}"
+          echo "Branch: ${GITHUB_REF_NAME}"
+          echo "Runner OS: ${RUNNER_OS}"
+      - name: Verify basic shell
+        run: |
+          test -n "${GITHUB_SHA}"
+          echo "Smoke test passed."
