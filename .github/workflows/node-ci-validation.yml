@@ -21,7 +21,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
       - name: Install isolated lab dependency
         run: npm install --ignore-scripts
       - name: Verify dependency tree
