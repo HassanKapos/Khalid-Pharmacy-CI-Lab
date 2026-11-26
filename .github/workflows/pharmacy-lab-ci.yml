@@ -47,7 +47,13 @@ jobs:
       - name: Batch capture and single-image OCR
         run: npm run test:phase3-6b
       - name: Local persistence and Bankak migration
-        run: npm run test:phase1a
+        run: |
+          npm run test:phase1a-local
+          npm run test:phase1a-bankak-migration
+      - name: Bankak Phase A acceptance suite
+        id: bankak_phase_a
+        continue-on-error: true
+        run: npm run test:bankak-phase-a
       - name: Backup encryption, serialization and restore sandbox
         run: |
           npm run test:backup-encryption
@@ -66,6 +72,13 @@ jobs:
           npm run test:multi-branch
           npm run test:pr2d-packing-lock
           npm run test:phase2d-pr2c
+      - name: Preserve Bankak Phase A failure status
+        if: always()
+        run: |
+          if [ "${{ steps.bankak_phase_a.outcome }}" = "failure" ]; then
+            echo "::error::Bankak Phase A acceptance suite failed; see its logs."
+            exit 1
+          fi
 
   android-debug-apk:
     name: Android Debug APK build
@@ -92,6 +105,10 @@ jobs:
         run: npm run build
       - name: Synchronize Capacitor Android project
         run: npx cap sync android
+      - name: Set up Android SDK 36
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
       - name: Install Android SDK packages
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - name: Set up Gradle 8.14.3
