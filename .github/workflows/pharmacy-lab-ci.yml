@@ -92,8 +92,6 @@ jobs:
         run: npm run build
       - name: Synchronize Capacitor Android project
         run: npx cap sync android
-      - name: Set up Android SDK 36
-        uses: android-actions/setup-android@v3
       - name: Install Android SDK packages
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - name: Set up Gradle 8.14.3
