@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  phase2f-isolated-tests:
+  phase2f-isolated-tests-rerun:
     runs-on: ubuntu-latest
     defaults:
       run:
