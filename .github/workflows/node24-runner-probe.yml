@@ -1,0 +1,40 @@
+name: CI Lab Node 24 Runner Probe
+
+on:
+  push:
+    branches:
+      - ci-lab-node24-runner-probe
+    paths:
+      - .github/workflows/node24-runner-probe.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runner-and-node24:
+    name: Verify runner allocation and Node.js 24
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Confirm runner allocation
+        run: |
+          echo "RUNNER_NAME=${RUNNER_NAME}"
+          echo "RUNNER_OS=${RUNNER_OS}"
+          echo "RUNNER_ARCH=${RUNNER_ARCH}"
+          test -n "${RUNNER_NAME}"
+          test "${RUNNER_OS}" = "Linux"
+
+      - name: Checkout isolated CI Lab repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Verify Node.js and npm
+        run: |
+          node --version
+          npm --version
+          node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 24) { console.error('Expected Node.js 24 or newer'); process.exit(1); } console.log('NODE24_CHECK=PASS');"
