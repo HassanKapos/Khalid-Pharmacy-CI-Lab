@@ -1,0 +1,130 @@
+
+name: Build Android Debug APK
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+      - phase-1-mlkit-poc-cloud-build
+      - fix/phase2d-barcode-ci-and-guard
+
+permissions:
+  contents: read
+
+jobs:
+  build-android-apk:
+    name: Build Khalid Pharmacy Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Setup Java JDK 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
+
+      - name: Accept Android SDK Licenses & Install Required Packages
+        run: |
+          set -e
+          echo "Accepting Android SDK licenses..."
+          yes | sdkmanager --licenses
+          echo "Installing Android SDK Platform 36..."
+          sdkmanager --install "platforms;android-36"
+          echo "Installing Android Build Tools 36.0.0..."
+          sdkmanager --install "build-tools;36.0.0"
+
+      - name: Install Node Dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Run Smart Pricing and Exact Unit Hierarchy Tests
+        run: npm run test:phase2a
+
+      - name: Verify TypeScript Types
+        run: npx tsc --noEmit
+
+      - name: Verify Android Back Navigation and Mobile UX
+        run: npx tsx scripts/test-android-navigation-ui.ts
+
+      - name: Verify Google Drive OAuth UI and Permissions
+        run: npx tsx scripts/test-google-drive-oauth-ui.ts
+
+      - name: Run ML Kit Adversarial Verification Suite
+        run: npx tsx scripts/test-mlkit-adversarial.ts
+
+      - name: Run ML Kit PoC & Web Fallback Tests
+        run: npx tsx scripts/test-mlkit-poc.ts
+
+      - name: Run Enterprise Barcode Engine Tests
+        run: npx tsx scripts/test-enterprise-barcode-engine.ts
+
+      - name: Run ZXing Exception & Failover Regression Tests
+        run: npx tsx scripts/test-zxing-exception-handling.ts
+
+      - name: Run POS Barcode & Inventory Flow Tests
+        run: npx tsx scripts/test-pos-barcode-flow.ts
+
+      - name: Run Multi-Branch & Firestore Security Tests
+        run: npx tsx scripts/test-multi-branch-security.ts
+
+      - name: Build Web Application
+        run: npm run build
+        env:
+          VITE_GOOGLE_OAUTH_CLIENT_ID: ${{ vars.VITE_GOOGLE_OAUTH_CLIENT_ID }}
+
+      - name: Sync Capacitor Android Project
+        run: npx cap sync android
+
+      - name: Run Production Initialization & Bundle Guard Tests
+        run: npx tsx scripts/test-production-init.ts
+
+      - name: Grant Execute Permission to Gradle Wrapper
+        run: chmod +x android/gradlew
+
+      - name: Assemble Debug APK with Gradle
+        run: |
+          cd android
+          ./gradlew assembleDebug --stacktrace --no-daemon -Pandroid.builder.sdkDownload=true
+
+      - name: Verify Debug APK Output
+        run: |
+          if [ ! -f "android/app/build/outputs/apk/debug/app-debug.apk" ]; then
+            echo "::error::Build succeeded but app-debug.apk was not found at expected path!"
+            exit 1
+          fi
+          echo "Debug APK built successfully:"
+          ls -lh android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Report debug APK signing certificate fingerprint
+        run: $ANDROID_HOME/build-tools/36.0.0/apksigner verify --print-certs android/app/build/outputs/apk/debug/app-debug.apk
+
+      # GitHub artifact storage is quota-limited. Keep PR verification focused on
+      # successful APK build/signing; upload artifacts only on explicit/manual or main builds.
+      - name: Upload Debug APK Artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: khalid-pharmacy-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 1
+          if-no-files-found: error
