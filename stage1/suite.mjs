@@ -16,8 +16,8 @@ async function test(name, fn) {
   await fn(); passed++; console.log(`PASS ${name}`);
 }
 try {
-  await env.withSecurityRulesDisabled(async ({ firestore }) => {
-    const db = firestore();
+  await env.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
     await setDoc(doc(db, "tenants/tenant-a/leases/shared"), {
       version: 0, owner: "unclaimed", expiresAt: Timestamp.fromMillis(Date.now() + 600000)
     });
@@ -63,8 +63,8 @@ try {
     batch.set(doc(operatorA, "tenants/tenant-a/operationalRecords/atomic-probe"), { label: "must-rollback" });
     batch.set(doc(operatorA, "tenants/tenant-a/sensitiveRecords/forbidden"), { purchaseCost: 1 });
     await assertFails(batch.commit());
-    await env.withSecurityRulesDisabled(async ({ firestore }) => {
-      assert.equal((await getDoc(doc(firestore(), "tenants/tenant-a/operationalRecords/atomic-probe"))).exists(), false);
+    await env.withSecurityRulesDisabled(async (context) => {
+      assert.equal((await getDoc(doc(context.firestore(), "tenants/tenant-a/operationalRecords/atomic-probe"))).exists(), false);
     });
   });
   await test("deterministic event replay remains idempotent", async () => {
