@@ -1,4 +1,4 @@
-name: PR #54 Firestore Rules & Phase 2F Emulator Verification (CI-Lab Experiment)
+name: "PR #54 Firestore Rules name: PR #54 Firestore Rules & Phase 2F Emulator Verification (CI-Lab Experiment) Phase 2F Emulator Verification (CI-Lab Experiment)"
 
 on:
   push:

@@ -1,0 +1,6 @@
+<!doctype html>
+<html><body>
+  <!-- Synthetic CI-Lab fixture for ST-25 role-scoped UI directive check -->
+  <div v-if="hasOnlineVerifiedAdminAccess() && stocktakingSessionsList.length > 0"></div>
+  <span v-if="hasOnlineVerifiedAdminAccess()" class="font-bold text-indigo-700 block font-mono">{{ currency(med.buyPrice) }}</span>
+</body></html>
