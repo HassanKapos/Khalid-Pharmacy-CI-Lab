@@ -1,0 +1,10 @@
+{
+  "name": "khalid-pharmacy-ci-lab-stage1",
+  "private": true,
+  "type": "module",
+  "scripts": { "test:stage1": "node suite.mjs" },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "4.0.1",
+    "firebase": "11.10.0"
+  }
+}
