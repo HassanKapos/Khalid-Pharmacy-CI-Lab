@@ -1,16 +1,16 @@
-name: "PR #54 Firestore Rules name: PR #54 Firestore Rules & Phase 2F Emulator Verification (CI-Lab Experiment) Phase 2F Emulator Verification (CI-Lab Experiment)"
+name: "PR #54 Full 66-Test + M-30 Real Browser E2E Verification (CI-Lab)"
 
 on:
   push:
     branches:
-      - 'exp/pr54-firestore-emulator-ci-2026-11-27'
+      - 'exp/pr54-m30-browser-e2e-2026-11-27'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  firestore-emulator-tests:
+  firestore-emulator-and-m30-browser-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -28,11 +28,12 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Verify runtime versions
+      - name: Verify runtime versions (Node, Java, Real Chrome)
         run: |
           node -v
           npm -v
           java -version
+          google-chrome --version
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
@@ -42,6 +43,9 @@ jobs:
 
       - name: Firestore Rules ESLint Security Check
         run: npx eslint firestore.rules
+
+      - name: Run Real Browser E2E Origin Isolation Suite (M-30)
+        run: npx tsx scripts/test-m30-browser-sop-e2e.ts
 
       - name: Run Phase 2F Pure Foundation Suite (F2F-01..F2F-33)
         run: npx tsx scripts/test-phase2f-stocktake-foundation.ts
