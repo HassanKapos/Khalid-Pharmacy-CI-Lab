@@ -1,0 +1,29 @@
+name: Stage 1 Synthetic Firestore Emulator Suite
+on:
+  push:
+    branches:
+      - test/stage1-synthetic-emulator-suite-2026-11-27
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  stage1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install isolated dependencies
+        working-directory: stage1
+        run: npm install --ignore-scripts
+      - name: Run real Firestore Emulator Stage 1 suite
+        run: npx --yes firebase-tools@latest emulators:exec --config stage1/firebase.json --only firestore --project demo-khalid-stage1 --non-interactive "npm --prefix stage1 run test:stage1"
