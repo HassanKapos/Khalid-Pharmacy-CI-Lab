@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - test/stage1-synthetic-emulator-suite-2026-11-27
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 permissions:
   contents: read
