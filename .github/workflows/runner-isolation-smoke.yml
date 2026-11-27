@@ -1,0 +1,39 @@
+name: Isolated GitHub Hosted Runner Smoke Test
+
+on:
+  push:
+    branches:
+      - test/github-hosted-runner-smoke-2026-11-27
+
+permissions:
+  contents: read
+
+jobs:
+  runner-smoke:
+    name: Verify hosted runner allocation and toolchain
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Confirm runner allocation
+        run: |
+          echo "RUNNER_ALLOCATED=YES"
+          echo "REPOSITORY=$GITHUB_REPOSITORY"
+          echo "REF=$GITHUB_REF"
+          echo "RUNNER_OS=$RUNNER_OS"
+          echo "RUNNER_ARCH=$RUNNER_ARCH"
+          test -n "$GITHUB_SHA"
+      - name: Verify Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Print tool versions
+        run: |
+          node --version
+          npm --version
+          java -version
+          echo "SMOKE_TEST=PASS"
