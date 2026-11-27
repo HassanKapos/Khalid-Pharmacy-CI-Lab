@@ -1,0 +1,56 @@
+name: PR #54 Firestore Rules & Phase 2F Emulator Verification (CI-Lab Experiment)
+
+on:
+  push:
+    branches:
+      - 'exp/pr54-firestore-emulator-ci-2026-11-27'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  firestore-emulator-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Free Eclipse Temurin OpenJDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Verify runtime versions
+        run: |
+          node -v
+          npm -v
+          java -version
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: TypeScript type-check
+        run: npx tsc --noEmit
+
+      - name: Firestore Rules ESLint Security Check
+        run: npx eslint firestore.rules
+
+      - name: Run Phase 2F Pure Foundation Suite (F2F-01..F2F-33)
+        run: npx tsx scripts/test-phase2f-stocktake-foundation.ts
+
+      - name: Run Phase 2F PR-F2 Level 3 Rules-Mirror Suite (L3-01..L3-06)
+        run: npx tsx scripts/test-phase2f-pr54-level3-integration.ts
+
+      - name: Run Real Firestore Emulator Suite (R3.2 M-01..M-33 + Phase 2F ST-01..ST-30)
+        run: npx --yes firebase-tools emulators:exec --project demo-khalid-pharmacy --only firestore,auth "npx tsx scripts/test-phase2e-b3-r32-emulator.ts"
+
+      - name: Run Real Firestore Emulator PR-F2 Integration Suite (F2F-INT-01..F2F-INT-18)
+        run: npx --yes firebase-tools emulators:exec --project demo-khalid-pharmacy --only firestore,auth "npx tsx scripts/test-phase2f-firestore-integration-emulator.ts"
