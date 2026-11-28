@@ -37,12 +37,64 @@ import {
   openPharmacyDB,
   setActiveBranchContext,
   saveMedicine,
+  createVerifiedMedicine,
   addBatchStock,
   calculateMedicineStock,
   getLedgerMovements,
   loadBatchCaptureSessionState,
   clearBatchCaptureSessionState
 } from '../src/services/pharmacyDb.ts';
+import {
+  __setAuthRuntimeForTests,
+  resolvePharmacySession
+} from './helpers/authTestHarness.ts';
+
+class MemoryStorage {
+  private map = new Map<string, string>();
+  get length(): number { return this.map.size; }
+  clear(): void { this.map.clear(); }
+  getItem(key: string): string | null { return this.map.has(key) ? this.map.get(key)! : null; }
+  key(index: number): string | null { return Array.from(this.map.keys())[index] ?? null; }
+  removeItem(key: string): void { this.map.delete(key); }
+  setItem(key: string, value: string): void { this.map.set(key, String(value)); }
+}
+if (typeof (globalThis as any).localStorage === 'undefined') {
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: new MemoryStorage(),
+    configurable: true,
+    writable: true
+  });
+}
+
+async function establishBatchCapture2AdminSession(branchId = 'khalid-1'): Promise<void> {
+  const mockUser: any = {
+    uid: 'batch-capture-2-admin-1',
+    email: 'admin@khalid.test',
+    displayName: 'Batch Capture 2 Test Admin',
+    emailVerified: true,
+    getIdToken: async () => 'tok-batch-capture-2',
+    getIdTokenResult: async () => ({ token: 'tok-batch-capture-2', claims: {} })
+  };
+  __setAuthRuntimeForTests({
+    isOfflineFn: () => false,
+    getServices: () => ({ auth: { currentUser: mockUser } as any, db: {} as any }),
+    getDocFn: async () => ({
+      exists: () => true,
+      data: () => ({
+        uid: 'batch-capture-2-admin-1',
+        email: 'admin@khalid.test',
+        displayName: 'Batch Capture 2 Test Admin',
+        role: 'super_admin',
+        branchIds: [branchId],
+        activeBranchId: branchId,
+        active: true
+      }),
+      metadata: { fromCache: false }
+    }) as any
+  });
+  await resolvePharmacySession(mockUser);
+  setActiveBranchContext(branchId, 'Main Branch');
+}
 
 interface SyntheticPackage {
   x: number;
@@ -427,12 +479,14 @@ async function runSuite() {
   // SCENARIO D & E: POS Cart Zero-Deduction Invariant & Inventory Ledger AddBatchStock
   // =========================================================================
   await test('D1 & E1. POS Cart action mutates zero ledger rows; Inventory Receive posts append-only PURCHASE ledger + stock update', async () => {
-    setActiveBranchContext('main');
-    const medId = 'med-batch2-amox-500';
+    await establishBatchCapture2AdminSession('khalid-1');
+
+    // Regression check: unverified medicine created via saveMedicine({ initialStock: 0 }) must block addBatchStock()
+    const unverifiedMedId = 'med-batch2-unverified-amox';
     await saveMedicine({
-      id: medId,
-      name: 'Amoxicillin 500mg capsules',
-      barcode: '6281001001005',
+      id: unverifiedMedId,
+      name: 'Unverified Amoxicillin 500mg',
+      barcode: '6281001009993',
       category: 'Antibiotics',
       buyPrice: 1200,
       sellPrice: 1800,
@@ -441,6 +495,44 @@ async function runSuite() {
       stripsPerPack: 2,
       pillsPerStrip: 10
     });
+    let unverifiedBatchErr = '';
+    try {
+      await addBatchStock({
+        medicineId: unverifiedMedId,
+        batchNumber: 'UNVERIFIED-B2-01',
+        expiry: '2028-01-01',
+        quantity: 5,
+        unit: 'pack',
+        costPerUnit: 1200
+      });
+    } catch (err: any) {
+      unverifiedBatchErr = String(err?.message || err || '');
+    }
+    ok(
+      unverifiedBatchErr.includes('MEDICINE_OPERATION_BLOCKED:MEDICINE_NOT_OPERATIONALLY_VERIFIED'),
+      `Unverified medicine must reject addBatchStock with MEDICINE_NOT_OPERATIONALLY_VERIFIED (got: ${unverifiedBatchErr})`
+    );
+    strictEqual((await getLedgerMovements(unverifiedMedId)).length, 0, 'Unverified medicine must persist 0 ledger movements');
+
+    const medId = 'med-batch2-amox-500';
+    await createVerifiedMedicine(
+      {
+        id: medId,
+        name: 'Amoxicillin 500mg capsules',
+        barcode: '6281001001005',
+        category: 'Antibiotics',
+        buyPrice: 1200,
+        sellPrice: 1800,
+        initialStock: 0,
+        expiry: '2028-01-01'
+      },
+      {
+        dosageForm: 'Capsule',
+        stripsPerPack: 2,
+        pillsPerStrip: 10,
+        sellPack: true
+      }
+    );
 
     // Establish baseline stock with an initial batch
     await addBatchStock({
@@ -530,9 +622,9 @@ async function runSuite() {
     ok(!modalSlice.includes('window.alert') && !modalSlice.includes('window.confirm'), 'No blocked browser alert/confirm inside Batch Capture 2.0 modals');
   });
 
-  await test('F2. DB_VERSION stays 5 and initializeAndMigrate retains R22 zero-arg production safety', async () => {
-    strictEqual(DB_VERSION, 5, 'IndexedDB schema version preserved at 5');
-    strictEqual(initializeAndMigrate.length, 0, 'initializeAndMigrate accepts 0 parameters (no accidental demo seeding in production)');
+  await test('F2. DB_VERSION is 6 (including Phase 2F stocktaking_items migration) and initializeAndMigrate defaults to production-safe empty initialization with optional options', async () => {
+    ok(DB_VERSION === 6 && DB_VERSION >= 5, `IndexedDB schema version includes v5 metadata and v6 Phase 2F stocktaking_items (current: ${DB_VERSION})`);
+    ok(initializeAndMigrate.length <= 1, 'initializeAndMigrate defaults to production-safe empty initialization unless explicit options?.seedDemo is passed');
     const db = await openPharmacyDB();
     ok(db.objectStoreNames.contains('metadata'), 'Metadata store available for zero-upgrade persistence');
   });
